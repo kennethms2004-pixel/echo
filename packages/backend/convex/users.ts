@@ -29,6 +29,10 @@ export const add = mutation({
       throw new Error("Missing organization");
     }
 
+    if (orgId) {
+      throw new Error("Tracking test");
+    }
+
     const { name } = args;
     const createdBy = identity.subject ?? identity.tokenIdentifier;
 

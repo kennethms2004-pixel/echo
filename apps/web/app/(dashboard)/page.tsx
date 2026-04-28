@@ -32,9 +32,6 @@ export default function Page() {
       </div>
       <Button onClick={handleAddUser}>Add user</Button>
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
-      <pre className="w-full overflow-auto rounded-md border bg-muted p-4 text-xs">
-        {JSON.stringify(users ?? null, null, 2)}
-      </pre>
     </main>
   );
 }
