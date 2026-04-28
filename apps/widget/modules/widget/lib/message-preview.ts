@@ -14,7 +14,8 @@ export function previewFromLastMessage(lastMessage: {
   const content = lastMessage.message?.content;
 
   if (typeof content === "string") {
-    return content;
+    const trimmed = content.trim();
+    return trimmed.length > 0 ? trimmed : "";
   }
 
   if (Array.isArray(content)) {
@@ -25,7 +26,8 @@ export function previewFromLastMessage(lastMessage: {
       "text" in first &&
       typeof (first as { text: unknown }).text === "string"
     ) {
-      return (first as { text: string }).text;
+      const trimmed = (first as { text: string }).text.trim();
+      return trimmed.length > 0 ? trimmed : "";
     }
   }
 

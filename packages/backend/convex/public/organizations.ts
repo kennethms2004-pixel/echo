@@ -11,11 +11,10 @@ export const validate = action({
     const secretKey = process.env.CLERK_SECRET_KEY;
 
     if (!secretKey) {
-      return {
-        valid: false,
-        reason:
-          "CLERK_SECRET_KEY is not set on Convex. Run: npx convex env set CLERK_SECRET_KEY <your_clerk_secret>"
-      };
+      console.error(
+        "[organizations.validate] CLERK_SECRET_KEY is not set on Convex. Run: npx convex env set CLERK_SECRET_KEY <your_clerk_secret>"
+      );
+      return { valid: false, reason: "Invalid organization" };
     }
 
     const clerkClient = createClerkClient({
@@ -38,10 +37,14 @@ export const validate = action({
           : undefined;
 
       if (status === 404) {
-        return { valid: false, reason: "Organization not found" };
+        return { valid: false, reason: "Invalid organization" };
       }
 
-      throw error;
+      console.error("[organizations.validate] unexpected failure", {
+        status,
+        error
+      });
+      return { valid: false, reason: "Invalid organization" };
     }
   }
 });

@@ -9,7 +9,7 @@ import {
 } from "@workspace/ui/components/collapsible";
 import { cn } from "@workspace/ui/lib/utils";
 
-export type AISourcesProps = ComponentProps<"div">;
+export type AISourcesProps = ComponentProps<typeof Collapsible>;
 
 export const AISources = ({ className, ...props }: AISourcesProps) => (
   <Collapsible

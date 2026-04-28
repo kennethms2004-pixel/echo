@@ -43,17 +43,27 @@ export const AIBranch = ({
   const [branches, setBranches] = useState<ReactElement[]>([]);
 
   const handleBranchChange = (newBranch: number) => {
-    setCurrentBranch(newBranch);
-    onBranchChange?.(newBranch);
+    if (branches.length === 0) {
+      return;
+    }
+    const clamped = Math.min(Math.max(newBranch, 0), branches.length - 1);
+    setCurrentBranch(clamped);
+    onBranchChange?.(clamped);
   };
 
   const goToPrevious = () => {
+    if (branches.length === 0) {
+      return;
+    }
     const newBranch =
       currentBranch > 0 ? currentBranch - 1 : branches.length - 1;
     handleBranchChange(newBranch);
   };
 
   const goToNext = () => {
+    if (branches.length === 0) {
+      return;
+    }
     const newBranch =
       currentBranch < branches.length - 1 ? currentBranch + 1 : 0;
     handleBranchChange(newBranch);
@@ -214,7 +224,7 @@ export const AIBranchPage = ({ className }: AIBranchPageProps) => {
         className,
       )}
     >
-      {currentBranch + 1} of {totalBranches}
+      {totalBranches > 0 ? currentBranch + 1 : 0} of {totalBranches}
     </span>
   );
 };

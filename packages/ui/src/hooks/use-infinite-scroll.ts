@@ -19,9 +19,17 @@ export const useInfiniteScroll = ({
   intersectionRoot
 }: UseInfiniteScrollProps) => {
   const topElementRef = useRef<HTMLDivElement>(null);
+  const isLoadingRef = useRef(false);
+
+  useEffect(() => {
+    if (status !== "LoadingMore") {
+      isLoadingRef.current = false;
+    }
+  }, [status]);
 
   const handleLoadMore = useCallback(() => {
-    if (status === "CanLoadMore") {
+    if (status === "CanLoadMore" && !isLoadingRef.current) {
+      isLoadingRef.current = true;
       loadMore(loadSize);
     }
   }, [status, loadMore, loadSize]);

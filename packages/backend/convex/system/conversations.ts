@@ -94,7 +94,12 @@ export const resolve = internalMutation({
       });
     }
 
+    if (conversation.status === "resolved") {
+      return { transitioned: false };
+    }
+
     await ctx.db.patch(conversation._id, { status: "resolved" });
+    return { transitioned: true };
   }
 });
 
@@ -115,6 +120,11 @@ export const escalate = internalMutation({
       });
     }
 
+    if (conversation.status === "escalated") {
+      return { transitioned: false };
+    }
+
     await ctx.db.patch(conversation._id, { status: "escalated" });
+    return { transitioned: true };
   }
 });

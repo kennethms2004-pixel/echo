@@ -1,6 +1,5 @@
 "use client";
 
-import { useRef } from "react";
 import { usePaginatedQuery } from "convex/react";
 import { formatDistanceToNow } from "date-fns";
 import { useAtomValue, useSetAtom } from "jotai";
@@ -60,8 +59,6 @@ export const ConversationsPanel = () => {
     loadSize: 10
   });
 
-  const listScrollRef = useRef<HTMLDivElement>(null);
-
   return (
     <div className="flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-hidden bg-background text-sidebar-foreground">
       <div className="shrink-0 flex flex-col gap-3.5 border-b p-2">
@@ -106,17 +103,11 @@ export const ConversationsPanel = () => {
         </Select>
       </div>
       {isLoadingFirstPage ? (
-        <div
-          ref={listScrollRef}
-          className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-y-auto [-webkit-overflow-scrolling:touch]"
-        >
+        <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-y-auto [-webkit-overflow-scrolling:touch]">
           <SkeletonConversations />
         </div>
       ) : (
-        <div
-          ref={listScrollRef}
-          className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-y-auto [-webkit-overflow-scrolling:touch]"
-        >
+        <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-y-auto [-webkit-overflow-scrolling:touch]">
           <div className="flex min-w-0 w-full flex-col text-sm">
             {conversations?.results.map((conversation) => {
               const isLastMessageFromOperator =
@@ -173,7 +164,7 @@ export const ConversationsPanel = () => {
                           className={cn(
                             "line-clamp-1 text-muted-foreground text-xs",
                             !isLastMessageFromOperator &&
-                              "font-bold text-black"
+                              "font-bold text-foreground"
                           )}
                         >
                           {conversation.lastMessage?.text}

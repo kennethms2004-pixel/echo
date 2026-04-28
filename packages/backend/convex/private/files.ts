@@ -82,13 +82,21 @@ export const addFile = action({
       contentHash: await contentHashFromArrayBuffer(bytes)
     });
 
+    let urlStorageId: Id<"_storage"> = storageId;
     if (!created) {
       console.debug("Entry already exists, skipping upload metadata");
       await ctx.storage.delete(storageId);
+      const existingEntry = await rag.getEntry(ctx, { entryId });
+      const existingStorageId = (existingEntry?.metadata as
+        | { storageId?: Id<"_storage"> }
+        | undefined)?.storageId;
+      if (existingStorageId) {
+        urlStorageId = existingStorageId;
+      }
     }
 
     return {
-      url: await ctx.storage.getUrl(storageId),
+      url: await ctx.storage.getUrl(urlStorageId),
       entryId
     };
   }
@@ -252,23 +260,40 @@ export const list = query({
       return { page: [], isDone: true, continueCursor: "" };
     }
 
-    const results = await rag.list(ctx, {
-      namespaceId: namespace.namespaceId,
-      paginationOpts: args.paginationOpts
-    });
+    const targetSize = args.paginationOpts.numItems;
+    const collected: PublicFile[] = [];
+    let cursor = args.paginationOpts.cursor;
+    let isDone = false;
+    let continueCursor = cursor ?? "";
 
-    const files = await Promise.all(
-      results.page.map((entry) => convertEntryToPublicFile(ctx, entry))
-    );
+    while (collected.length < targetSize) {
+      const results = await rag.list(ctx, {
+        namespaceId: namespace.namespaceId,
+        paginationOpts: { numItems: targetSize, cursor }
+      });
 
-    const filteredFiles = args.category
-      ? files.filter((file) => file.category === args.category)
-      : files;
+      const pageFiles = await Promise.all(
+        results.page.map((entry) => convertEntryToPublicFile(ctx, entry))
+      );
+
+      const matching = args.category
+        ? pageFiles.filter((file) => file.category === args.category)
+        : pageFiles;
+
+      collected.push(...matching);
+      continueCursor = results.continueCursor;
+      isDone = results.isDone;
+
+      if (results.isDone) {
+        break;
+      }
+      cursor = results.continueCursor;
+    }
 
     return {
-      page: filteredFiles,
-      isDone: results.isDone,
-      continueCursor: results.continueCursor
+      page: collected.slice(0, targetSize),
+      isDone: isDone && collected.length <= targetSize,
+      continueCursor
     };
   }
 });

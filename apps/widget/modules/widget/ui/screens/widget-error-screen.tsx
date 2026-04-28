@@ -17,8 +17,12 @@ export const WidgetErrorScreen = () => {
           <p className="text-lg">Let&apos;s get you started</p>
         </div>
       </WidgetHeader>
-      <div className="flex flex-1 flex-col items-center justify-center gap-y-4 p-4 text-muted-foreground">
-        <AlertTriangleIcon />
+      <div
+        aria-live="assertive"
+        className="flex flex-1 flex-col items-center justify-center gap-y-4 p-4 text-muted-foreground"
+        role="alert"
+      >
+        <AlertTriangleIcon aria-hidden="true" />
         <p className="text-sm">{errorMessage || "Invalid configuration"}</p>
       </div>
     </>

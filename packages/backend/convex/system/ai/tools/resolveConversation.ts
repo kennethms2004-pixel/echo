@@ -17,10 +17,6 @@ export const resolveConversationTool = createTool({
       throw new Error("Missing thread ID");
     }
 
-    await ctx.runMutation(internal.system.conversations.resolve, {
-      threadId: ctx.threadId
-    });
-
     const content = "Conversation resolved.";
 
     await supportAgent.saveMessage(ctx, {
@@ -35,6 +31,10 @@ export const resolveConversationTool = createTool({
       threadId: ctx.threadId,
       text: content,
       messageRole: "assistant"
+    });
+
+    await ctx.runMutation(internal.system.conversations.resolve, {
+      threadId: ctx.threadId
     });
 
     return "Conversation resolved.";

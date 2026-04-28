@@ -16,12 +16,17 @@ export const escalateConversationTool = createTool({
   }),
   handler: async (ctx, _args) => {
     if (!ctx.threadId) {
-      return "Missing thread ID";
+      throw new Error("Missing thread ID");
     }
 
-    await ctx.runMutation(internal.system.conversations.escalate, {
-      threadId: ctx.threadId
-    });
+    const { transitioned } = await ctx.runMutation(
+      internal.system.conversations.escalate,
+      { threadId: ctx.threadId }
+    );
+
+    if (!transitioned) {
+      return "Conversation already escalated.";
+    }
 
     const content = "Conversation escalated to a human operator.";
 

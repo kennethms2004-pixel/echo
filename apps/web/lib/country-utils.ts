@@ -11,6 +11,10 @@ export function getCountryFromTimezone(timezone?: string) {
     return null;
   }
 
+  if (timezoneInfo.countries.length > 1) {
+    return null;
+  }
+
   const countryCode = timezoneInfo.countries[0] as string;
   const country = ct.getCountry(countryCode);
 

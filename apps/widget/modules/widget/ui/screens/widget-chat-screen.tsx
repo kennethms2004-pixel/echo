@@ -190,11 +190,17 @@ export const WidgetChatScreen = () => {
             name="message"
             render={({ field }) => (
               <AIInputTextarea
-                disabled={conversation?.status === "resolved"}
+                disabled={
+                  conversation?.status === "resolved" ||
+                  form.formState.isSubmitting
+                }
                 onChange={field.onChange}
                 onKeyDown={(event) => {
                   if (event.key === "Enter" && !event.shiftKey) {
                     event.preventDefault();
+                    if (form.formState.isSubmitting) {
+                      return;
+                    }
                     form.handleSubmit(onSubmit)();
                   }
                 }}
@@ -211,7 +217,9 @@ export const WidgetChatScreen = () => {
             <AIInputTools />
             <AIInputSubmit
               disabled={
-                conversation?.status === "resolved" || !form.formState.isValid
+                conversation?.status === "resolved" ||
+                !form.formState.isValid ||
+                form.formState.isSubmitting
               }
               status="ready"
               type="submit"

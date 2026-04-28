@@ -30,18 +30,23 @@ export const DeleteFileDialog = ({
 }: DeleteFileDialogProps) => {
   const deleteFile = useMutation(api.private.files.deleteFile);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const handleDelete = async () => {
     if (!file) {
       return;
     }
     setIsDeleting(true);
+    setDeleteError(null);
     try {
       await deleteFile({ entryId: file.id });
       onDeleted?.();
       onOpenChange(false);
     } catch (error) {
       console.error(error);
+      setDeleteError(
+        error instanceof Error ? error.message : "Failed to delete file"
+      );
     } finally {
       setIsDeleting(false);
     }
@@ -67,6 +72,15 @@ export const DeleteFileDialog = ({
             </div>
           </div>
         ) : null}
+        {deleteError && (
+          <p
+            aria-live="polite"
+            className="text-destructive text-sm"
+            role="alert"
+          >
+            {deleteError}
+          </p>
+        )}
         <DialogFooter>
           <Button
             disabled={isDeleting}

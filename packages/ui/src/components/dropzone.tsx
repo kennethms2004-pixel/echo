@@ -58,20 +58,20 @@ export const Dropzone = ({
 
   return (
     <DropzoneCtx.Provider value={{ src, accept, maxSize, minSize, maxFiles }}>
-      <button
+      <div
+        aria-disabled={disabled || undefined}
         className={cn(
           "relative flex h-auto w-full flex-col items-center justify-center gap-3 rounded-md border border-dashed bg-muted/30 p-6 text-muted-foreground text-sm outline-none transition-colors hover:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring",
           dropzone.isDragActive && "border-primary bg-muted",
           disabled && "cursor-not-allowed opacity-60",
           className,
         )}
-        disabled={disabled}
-        type="button"
         {...dropzone.getRootProps()}
+        tabIndex={disabled ? -1 : 0}
       >
         <input {...dropzone.getInputProps()} />
         {children}
-      </button>
+      </div>
     </DropzoneCtx.Provider>
   );
 };

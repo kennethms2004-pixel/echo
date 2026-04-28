@@ -17,7 +17,11 @@ export const validate = mutation({
       return { valid: false, reason: "Contact session expired" };
     }
 
-    return { valid: true, contactSession };
+    return {
+      valid: true,
+      sessionId: contactSession._id,
+      expiresAt: contactSession.expiresAt
+    };
   }
 });
 
@@ -81,13 +85,15 @@ export const create = mutation({
     ].join("|");
 
     // Single mutation: Convex runs this handler atomically (read + insert are one transaction).
+    // Bounded read so the rate-limit path can't fan out across an entire org's history.
+    const RECENT_SESSIONS_SCAN_LIMIT = 200;
     const recentSessions = await ctx.db
       .query("contactSessions")
       .withIndex("by_organization_id", (q) =>
         q.eq("organizationId", args.organizationId)
       )
       .filter((q) => q.gt(q.field("_creationTime"), recentWindowStart))
-      .collect();
+      .take(RECENT_SESSIONS_SCAN_LIMIT);
 
     const recentSessionCountForRequester = recentSessions.filter((session) => {
       const sessionFingerprint = [

@@ -48,7 +48,7 @@ function WidgetPageInner() {
           ). Example:
         </p>
         <code className="bg-muted text-foreground block rounded-md border p-3 text-sm break-all">
-          http://localhost:3001?organizationId=org_xxxxxxxx
+          /?organizationId=org_xxxxxxxx
         </code>
       </main>
     );

@@ -20,7 +20,7 @@ export function WidgetOrganizationProvider({
 
 export function useWidgetOrganizationId(): string {
   const id = useContext(WidgetOrganizationContext);
-  if (!id) {
+  if (id === null) {
     throw new Error(
       "useWidgetOrganizationId must be used within WidgetOrganizationProvider"
     );

@@ -14,6 +14,14 @@ export const create = action({
     contactSessionId: v.id("contactSessions")
   },
   handler: async (ctx, args) => {
+    const prompt = args.prompt.trim();
+    if (!prompt) {
+      throw new ConvexError({
+        code: "BAD_REQUEST",
+        message: "Prompt cannot be blank"
+      });
+    }
+
     const contactSession = await ctx.runQuery(
       internal.system.contactSessions.getOne,
       { contactSessionId: args.contactSessionId }
@@ -61,11 +69,39 @@ export const create = action({
     const shouldTriggerAgent = conversation.status === "unresolved";
 
     if (shouldTriggerAgent) {
+      // Re-check status immediately before invoking the agent so we abort if
+      // the thread was escalated/resolved between the initial fetch and now.
+      const fresh = await ctx.runQuery(
+        internal.system.conversations.getByThreadId,
+        { threadId: args.threadId }
+      );
+      if (!fresh || fresh.status !== "unresolved") {
+        if (fresh && fresh.status === "resolved") {
+          throw new ConvexError({
+            code: "BAD_REQUEST",
+            message: "Conversation resolved"
+          });
+        }
+        await supportAgent.saveMessage(ctx, {
+          threadId: args.threadId,
+          message: { role: "user", content: prompt }
+        });
+        await ctx.runMutation(
+          internal.system.conversations.patchLastMessageSnapshot,
+          {
+            threadId: args.threadId,
+            text: prompt,
+            messageRole: "user"
+          }
+        );
+        return;
+      }
+
       await supportAgent.generateText(
         ctx,
         { threadId: args.threadId },
         {
-          prompt: args.prompt,
+          prompt,
           tools: {
             resolveConversation: resolveConversationTool,
             escalateConversation: escalateConversationTool
@@ -90,11 +126,11 @@ export const create = action({
     } else {
       await supportAgent.saveMessage(ctx, {
         threadId: args.threadId,
-        message: { role: "user", content: args.prompt }
+        message: { role: "user", content: prompt }
       });
       await ctx.runMutation(internal.system.conversations.patchLastMessageSnapshot, {
         threadId: args.threadId,
-        text: args.prompt,
+        text: prompt,
         messageRole: "user"
       });
     }

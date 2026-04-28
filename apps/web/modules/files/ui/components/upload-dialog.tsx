@@ -35,6 +35,7 @@ export const UploadDialog = ({
   const addFile = useAction(api.private.files.addFile);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadForm, setUploadForm] = useState({
     category: "",
     filename: "",
@@ -54,10 +55,12 @@ export const UploadDialog = ({
     onOpenChange(false);
     setUploadedFiles([]);
     setUploadForm({ category: "", filename: "" });
+    setUploadError(null);
   };
 
   const handleUpload = async () => {
     setIsUploading(true);
+    setUploadError(null);
     try {
       const blob = uploadedFiles[0];
       if (!blob) {
@@ -76,6 +79,11 @@ export const UploadDialog = ({
       handleCancel();
     } catch (error) {
       console.error(error);
+      setUploadError(
+        error instanceof Error
+          ? error.message
+          : "Failed to upload file. Please try again."
+      );
     } finally {
       setIsUploading(false);
     }
@@ -141,6 +149,15 @@ export const UploadDialog = ({
             <DropzoneEmptyState />
             <DropzoneContent />
           </Dropzone>
+          {uploadError && (
+            <p
+              aria-live="polite"
+              className="text-destructive text-sm"
+              role="alert"
+            >
+              {uploadError}
+            </p>
+          )}
         </div>
         <DialogFooter>
           <Button
