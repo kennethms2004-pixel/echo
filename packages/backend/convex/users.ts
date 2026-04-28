@@ -23,6 +23,12 @@ export const add = mutation({
       throw new Error("Unauthorized");
     }
 
+    const orgId = identity.org_id as string;
+
+    if (!orgId) {
+      throw new Error("Missing organization");
+    }
+
     const { name } = args;
     const createdBy = identity.subject ?? identity.tokenIdentifier;
 
