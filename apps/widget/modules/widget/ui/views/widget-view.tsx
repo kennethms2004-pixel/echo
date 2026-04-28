@@ -21,7 +21,7 @@ export const WidgetView = ({ organizationId }: Props) => {
   const screen = useAtomValue(screenAtom);
   const setScreen = useSetAtom(screenAtom);
   const setErrorMessage = useSetAtom(errorMessageAtom);
-  const previousOrganizationIdRef = useRef<string | null>(null);
+  const previousOrganizationIdRef = useRef(organizationId);
 
   useLayoutEffect(() => {
     if (previousOrganizationIdRef.current === organizationId) {

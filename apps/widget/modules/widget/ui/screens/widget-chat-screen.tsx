@@ -5,6 +5,7 @@ import { useAction, useQuery } from "convex/react";
 import { useThreadMessages, toUIMessages } from "@convex-dev/agent/react";
 import { useAtomValue, useSetAtom } from "jotai";
 import { ArrowLeftIcon, MenuIcon } from "lucide-react";
+import { useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
@@ -54,20 +55,27 @@ export const WidgetChatScreen = () => {
     contactSessionIdAtomFamily(organizationId)
   );
 
-  const conversation = useQuery(
-    api.public.conversations.getOne,
-    conversationId && contactSessionId
-      ? { conversationId, contactSessionId }
-      : "skip"
+  const conversationArgs = useMemo(
+    () =>
+      conversationId && contactSessionId
+        ? { conversationId, contactSessionId }
+        : ("skip" as const),
+    [conversationId, contactSessionId]
   );
 
-  const messages = useThreadMessages(
-    api.public.messages.getMany,
-    conversation?.threadId && contactSessionId
-      ? { threadId: conversation.threadId, contactSessionId }
-      : "skip",
-    { initialNumItems: 10 }
+  const conversation = useQuery(api.public.conversations.getOne, conversationArgs);
+
+  const threadMessagesArgs = useMemo(
+    () =>
+      conversation?.threadId && contactSessionId
+        ? { threadId: conversation.threadId, contactSessionId }
+        : ("skip" as const),
+    [conversation?.threadId, contactSessionId]
   );
+
+  const messages = useThreadMessages(api.public.messages.getMany, threadMessagesArgs, {
+    initialNumItems: 10
+  });
 
   const {
     topElementRef,
