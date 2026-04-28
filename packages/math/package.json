@@ -1,0 +1,19 @@
+{
+  "name": "@workspace/math",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "tsc --watch",
+    "build": "tsc"
+  },
+  "exports": {
+    "./add": {
+      "types": "./dist/add.d.ts",
+      "default": "./dist/add.js"
+    }
+  },
+  "devDependencies": {
+    "@workspace/typescript-config": "workspace:*",
+    "typescript": "5.7.3"
+  }
+}
