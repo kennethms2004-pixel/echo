@@ -15,7 +15,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>
+      {/* TODO: confirm whether min-h-screen and min-w-screen are needed when rendered inside an iframe */}
+      <body className="min-h-screen min-w-screen">
         <Providers>{children}</Providers>
       </body>
     </html>

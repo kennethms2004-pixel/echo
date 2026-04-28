@@ -71,6 +71,8 @@ const accountItems = [
 
 export const DashboardSidebar = () => {
   const pathname = usePathname();
+  const activeMenuButtonClass =
+    "bg-gradient-to-b from-sidebar-primary to-[var(--sidebar-primary-dark)]! text-sidebar-primary-foreground hover:to-[var(--sidebar-primary-dark-90)]";
 
   const isActive = (url: string) => {
     if (url === "/") {
@@ -120,6 +122,9 @@ export const DashboardSidebar = () => {
                     asChild
                     tooltip={item.title}
                     isActive={isActive(item.url)}
+                    className={cn(
+                      isActive(item.url) && activeMenuButtonClass
+                    )}
                   >
                     <Link href={item.url}>
                       <item.icon className="size-4" />
@@ -142,6 +147,9 @@ export const DashboardSidebar = () => {
                     asChild
                     tooltip={item.title}
                     isActive={isActive(item.url)}
+                    className={cn(
+                      isActive(item.url) && activeMenuButtonClass
+                    )}
                   >
                     <Link href={item.url}>
                       <item.icon className="size-4" />
@@ -164,6 +172,9 @@ export const DashboardSidebar = () => {
                     asChild
                     tooltip={item.title}
                     isActive={isActive(item.url)}
+                    className={cn(
+                      isActive(item.url) && activeMenuButtonClass
+                    )}
                   >
                     <Link href={item.url}>
                       <item.icon className="size-4" />
