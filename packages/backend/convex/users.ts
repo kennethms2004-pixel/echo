@@ -24,8 +24,15 @@ export const add = mutation({
     }
 
     const { name } = args;
+    const createdBy = identity.subject ?? identity.tokenIdentifier;
+
+    if (!createdBy) {
+      throw new Error("Unable to determine authenticated user id.");
+    }
+
     const userId = await ctx.db.insert("users", {
-      name
+      name,
+      createdBy
     });
 
     return userId;
