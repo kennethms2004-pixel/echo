@@ -10,8 +10,10 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@workspace/backend": "workspace:*",
     "@workspace/math": "workspace:*",
     "@workspace/ui": "workspace:*",
+    "convex": "1.25.4",
     "next": "15.2.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
