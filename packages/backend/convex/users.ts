@@ -1,19 +1,25 @@
 import { mutation, query } from "./_generated/server";
+import { v } from "convex/values";
+
+const USERS_LIMIT = 50;
 
 export const getMany = query({
   args: {},
   handler: async (ctx) => {
-    const users = await ctx.db.query("users").collect();
+    const users = await ctx.db.query("users").take(USERS_LIMIT);
 
     return users;
   }
 });
 
 export const add = mutation({
-  args: {},
-  handler: async (ctx) => {
+  args: {
+    name: v.string()
+  },
+  handler: async (ctx, args) => {
+    const { name } = args;
     const userId = await ctx.db.insert("users", {
-      name: "Antonio"
+      name
     });
 
     return userId;
