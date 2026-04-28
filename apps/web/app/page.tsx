@@ -1,10 +1,16 @@
 "use client";
 
 import { useState } from "react";
+import { SignInButton, UserButton } from "@clerk/nextjs";
 import { add } from "@workspace/math/add";
 import { api } from "@workspace/backend/_generated/api";
 import { Button } from "@workspace/ui/components/button";
-import { useMutation, useQuery } from "convex/react";
+import {
+  Authenticated,
+  Unauthenticated,
+  useMutation,
+  useQuery
+} from "convex/react";
 
 export default function Page() {
   const users = useQuery(api.users.getMany);
@@ -23,15 +29,22 @@ export default function Page() {
 
   return (
     <main className="mx-auto flex min-h-svh w-full max-w-sm flex-col items-center justify-center gap-6 p-8">
-      <div className="space-y-2 text-center">
-        <h1 className="text-3xl font-bold tracking-tight">Hello apps web</h1>
-        <p className="text-muted-foreground">2 + 2 is {add(2, 2)}</p>
-      </div>
-      <Button onClick={handleAddUser}>Add user</Button>
-      {error ? <p className="text-sm text-destructive">{error}</p> : null}
-      <pre className="w-full overflow-auto rounded-md border bg-muted p-4 text-xs">
-        {JSON.stringify(users ?? null, null, 2)}
-      </pre>
+      <Authenticated>
+        <UserButton />
+        <div className="space-y-2 text-center">
+          <h1 className="text-3xl font-bold tracking-tight">Hello apps web</h1>
+          <p className="text-muted-foreground">2 + 2 is {add(2, 2)}</p>
+        </div>
+        <Button onClick={handleAddUser}>Add user</Button>
+        {error ? <p className="text-sm text-destructive">{error}</p> : null}
+        <pre className="w-full overflow-auto rounded-md border bg-muted p-4 text-xs">
+          {JSON.stringify(users ?? null, null, 2)}
+        </pre>
+      </Authenticated>
+      <Unauthenticated>
+        <p className="text-muted-foreground">Must be signed in</p>
+        <SignInButton>Sign in</SignInButton>
+      </Unauthenticated>
     </main>
   );
 }

@@ -17,9 +17,22 @@ export const add = mutation({
     name: v.string()
   },
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+
+    if (identity === null) {
+      throw new Error("Unauthorized");
+    }
+
     const { name } = args;
+    const createdBy = identity.subject ?? identity.tokenIdentifier;
+
+    if (!createdBy) {
+      throw new Error("Unable to determine authenticated user id.");
+    }
+
     const userId = await ctx.db.insert("users", {
-      name
+      name,
+      createdBy
     });
 
     return userId;
