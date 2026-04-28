@@ -1,18 +1,29 @@
 "use client";
 
+import { useState } from "react";
 import { HomeIcon, InboxIcon } from "lucide-react";
 
 import { Button } from "@workspace/ui/components/button";
 import { cn } from "@workspace/ui/lib/utils";
 
 export const WidgetFooter = () => {
-  const screen: string = "selection";
+  const [screen, setScreen] = useState<"selection" | "inbox">("selection");
+
+  const handleSelectionClick = () => {
+    setScreen("selection");
+    // TODO: wire to chapter 12 state/router once screen management is centralized.
+  };
+
+  const handleInboxClick = () => {
+    setScreen("inbox");
+    // TODO: wire to chapter 12 state/router once screen management is centralized.
+  };
 
   return (
     <footer className="flex items-center justify-between border-t bg-background">
       <Button
         className="h-14 flex-1 rounded-none"
-        onClick={() => {}}
+        onClick={handleSelectionClick}
         size="icon"
         variant="ghost"
       >
@@ -22,7 +33,7 @@ export const WidgetFooter = () => {
       </Button>
       <Button
         className="h-14 flex-1 rounded-none"
-        onClick={() => {}}
+        onClick={handleInboxClick}
         size="icon"
         variant="ghost"
       >

@@ -6,11 +6,10 @@ interface Props {
   organizationId: string;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const WidgetView = ({ organizationId }: Props) => {
   return (
     <main className="flex h-full w-full flex-col overflow-hidden rounded-xl border bg-muted">
-      <WidgetAuthScreen />
+      <WidgetAuthScreen organizationId={organizationId} />
     </main>
   );
 };

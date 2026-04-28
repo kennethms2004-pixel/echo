@@ -3,6 +3,9 @@ import { v } from "convex/values";
 import { mutation } from "../_generated/server";
 
 const SESSION_DURATION_MS = 24 * 60 * 60 * 1000;
+const RATE_LIMIT_WINDOW_MS = 60 * 1000;
+const MAX_REQUESTS_PER_WINDOW = 5;
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export const create = mutation({
   args: {
@@ -21,18 +24,70 @@ export const create = mutation({
         timezone: v.optional(v.string()),
         timezoneOffset: v.optional(v.number()),
         cookieEnabled: v.optional(v.boolean()),
-        referrer: v.optional(v.string()),
-        currentUrl: v.optional(v.string())
+        referrerDomain: v.optional(v.string()),
+        currentPath: v.optional(v.string())
       })
     )
   },
   handler: async (ctx, args) => {
     const now = Date.now();
+    const email = args.email.trim().toLowerCase();
+
+    if (!EMAIL_REGEX.test(email)) {
+      throw new Error("Invalid email address.");
+    }
+
+    const existingSession = await ctx.db
+      .query("contactSessions")
+      .withIndex("by_organization_id", (q) =>
+        q.eq("organizationId", args.organizationId)
+      )
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("email"), email),
+          q.gt(q.field("expiresAt"), now)
+        )
+      )
+      .first();
+
+    if (existingSession) {
+      return existingSession._id;
+    }
+
+    const recentWindowStart = now - RATE_LIMIT_WINDOW_MS;
+    const requesterFingerprint = [
+      args.metadata?.userAgent ?? "unknown",
+      args.metadata?.language ?? "unknown",
+      args.metadata?.timezone ?? "unknown"
+    ].join("|");
+
+    const recentSessions = await ctx.db
+      .query("contactSessions")
+      .withIndex("by_organization_id", (q) =>
+        q.eq("organizationId", args.organizationId)
+      )
+      .filter((q) => q.gt(q.field("_creationTime"), recentWindowStart))
+      .take(100);
+
+    const recentSessionCountForRequester = recentSessions.filter((session) => {
+      const sessionFingerprint = [
+        session.metadata?.userAgent ?? "unknown",
+        session.metadata?.language ?? "unknown",
+        session.metadata?.timezone ?? "unknown"
+      ].join("|");
+
+      return sessionFingerprint === requesterFingerprint;
+    }).length;
+
+    if (recentSessionCountForRequester >= MAX_REQUESTS_PER_WINDOW) {
+      throw new Error("Too many session attempts. Please try again later.");
+    }
+
     const expiresAt = now + SESSION_DURATION_MS;
 
     const contactSessionId = await ctx.db.insert("contactSessions", {
       name: args.name,
-      email: args.email,
+      email,
       organizationId: args.organizationId,
       expiresAt,
       metadata: args.metadata

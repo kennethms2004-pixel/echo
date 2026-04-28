@@ -2,6 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "convex/react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
@@ -26,10 +27,15 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-export const WidgetAuthScreen = () => {
+interface WidgetAuthScreenProps {
+  organizationId: string;
+}
+
+export const WidgetAuthScreen = ({ organizationId }: WidgetAuthScreenProps) => {
   const createContactSession = useMutation(
     api.public.contactSessions.create
   );
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -40,12 +46,24 @@ export const WidgetAuthScreen = () => {
   });
 
   const onSubmit = async (values: FormValues) => {
-    // TODO: replace with state-managed organizationId once chapter 12 wires it up
-    const organizationId = "123";
-
     if (!organizationId) {
+      setSubmitError("Missing organization context. Please reload the widget.");
       return;
     }
+
+    setSubmitError(null);
+
+    const referrerDomain = (() => {
+      if (!document.referrer) {
+        return undefined;
+      }
+
+      try {
+        return new URL(document.referrer).hostname;
+      } catch {
+        return undefined;
+      }
+    })();
 
     const metadata: Doc<"contactSessions">["metadata"] = {
       userAgent: navigator.userAgent,
@@ -58,17 +76,24 @@ export const WidgetAuthScreen = () => {
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       timezoneOffset: new Date().getTimezoneOffset(),
       cookieEnabled: navigator.cookieEnabled,
-      referrer: document.referrer || "direct",
-      currentUrl: window.location.href
+      referrerDomain,
+      currentPath: window.location.pathname
     };
 
-    const contactSessionId = await createContactSession({
-      ...values,
-      metadata,
-      organizationId
-    });
+    try {
+      const contactSessionId = await createContactSession({
+        ...values,
+        metadata,
+        organizationId
+      });
 
-    console.log({ contactSessionId });
+      console.log({ contactSessionId });
+    } catch (error) {
+      console.error("Failed to create contact session", error);
+      setSubmitError(
+        "We couldn't start your session. Please try again in a moment."
+      );
+    }
   };
 
   return (
@@ -121,6 +146,11 @@ export const WidgetAuthScreen = () => {
           <Button disabled={form.formState.isSubmitting} size="lg" type="submit">
             Continue
           </Button>
+          {submitError ? (
+            <p className="text-sm text-destructive" role="alert">
+              {submitError}
+            </p>
+          ) : null}
         </form>
       </Form>
     </>

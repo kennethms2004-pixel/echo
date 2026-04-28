@@ -71,6 +71,8 @@ const accountItems = [
 
 export const DashboardSidebar = () => {
   const pathname = usePathname();
+  const activeMenuButtonClass =
+    "bg-gradient-to-b from-sidebar-primary to-[var(--sidebar-primary-dark)]! text-sidebar-primary-foreground hover:to-[var(--sidebar-primary-dark-90)]";
 
   const isActive = (url: string) => {
     if (url === "/") {
@@ -121,8 +123,7 @@ export const DashboardSidebar = () => {
                     tooltip={item.title}
                     isActive={isActive(item.url)}
                     className={cn(
-                      isActive(item.url) &&
-                        "bg-gradient-to-b from-sidebar-primary to-[#1e40af]! text-sidebar-primary-foreground hover:to-[#1e40af]/90"
+                      isActive(item.url) && activeMenuButtonClass
                     )}
                   >
                     <Link href={item.url}>
@@ -147,8 +148,7 @@ export const DashboardSidebar = () => {
                     tooltip={item.title}
                     isActive={isActive(item.url)}
                     className={cn(
-                      isActive(item.url) &&
-                        "bg-gradient-to-b from-sidebar-primary to-[#1e40af]! text-sidebar-primary-foreground hover:to-[#1e40af]/90"
+                      isActive(item.url) && activeMenuButtonClass
                     )}
                   >
                     <Link href={item.url}>
@@ -173,8 +173,7 @@ export const DashboardSidebar = () => {
                     tooltip={item.title}
                     isActive={isActive(item.url)}
                     className={cn(
-                      isActive(item.url) &&
-                        "bg-gradient-to-b from-sidebar-primary to-[#1e40af]! text-sidebar-primary-foreground hover:to-[#1e40af]/90"
+                      isActive(item.url) && activeMenuButtonClass
                     )}
                   >
                     <Link href={item.url}>

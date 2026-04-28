@@ -19,8 +19,8 @@ export default defineSchema({
         timezone: v.optional(v.string()),
         timezoneOffset: v.optional(v.number()),
         cookieEnabled: v.optional(v.boolean()),
-        referrer: v.optional(v.string()),
-        currentUrl: v.optional(v.string())
+        referrerDomain: v.optional(v.string()),
+        currentPath: v.optional(v.string())
       })
     )
   })
