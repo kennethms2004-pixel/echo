@@ -6,7 +6,14 @@ import { supportAgent } from "../agents/supportAgent";
 
 export const escalateConversationTool = createTool({
   description: "Escalate a conversation.",
-  args: z.object({}),
+  args: z.object({
+    reason: z
+      .string()
+      .optional()
+      .describe(
+        "Optional short reason why the conversation is being escalated to a human."
+      )
+  }),
   handler: async (ctx, _args) => {
     if (!ctx.threadId) {
       return "Missing thread ID";
