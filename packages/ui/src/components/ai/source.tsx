@@ -62,7 +62,7 @@ export const AISource = ({
   <a
     className="flex items-center gap-2"
     href={href}
-    rel="noreferrer"
+    rel="noopener noreferrer"
     target="_blank"
     {...props}
   >

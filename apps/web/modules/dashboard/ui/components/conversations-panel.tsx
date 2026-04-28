@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import { usePaginatedQuery } from "convex/react";
 import { formatDistanceToNow } from "date-fns";
 import { useAtomValue, useSetAtom } from "jotai";
@@ -17,7 +18,6 @@ import { api } from "@workspace/backend/_generated/api";
 import { ConversationStatusIcon } from "@workspace/ui/components/conversation-status-icon";
 import { DicebearAvatar } from "@workspace/ui/components/dicebear-avatar";
 import { InfiniteScrollTrigger } from "@workspace/ui/components/infinite-scroll-trigger";
-import { ScrollArea } from "@workspace/ui/components/scroll-area";
 import {
   Select,
   SelectContent,
@@ -60,9 +60,11 @@ export const ConversationsPanel = () => {
     loadSize: 10
   });
 
+  const listScrollRef = useRef<HTMLDivElement>(null);
+
   return (
-    <div className="flex h-full w-full flex-col bg-background text-sidebar-foreground">
-      <div className="flex flex-col gap-3.5 border-b p-2">
+    <div className="flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-hidden bg-background text-sidebar-foreground">
+      <div className="shrink-0 flex flex-col gap-3.5 border-b p-2">
         <Select
           defaultValue="all"
           onValueChange={(value) =>
@@ -104,13 +106,21 @@ export const ConversationsPanel = () => {
         </Select>
       </div>
       {isLoadingFirstPage ? (
-        <SkeletonConversations />
+        <div
+          ref={listScrollRef}
+          className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-y-auto [-webkit-overflow-scrolling:touch]"
+        >
+          <SkeletonConversations />
+        </div>
       ) : (
-        <ScrollArea className="max-h-[calc(100vh-53px)]">
-          <div className="flex w-full flex-1 flex-col text-sm">
+        <div
+          ref={listScrollRef}
+          className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-y-auto [-webkit-overflow-scrolling:touch]"
+        >
+          <div className="flex min-w-0 w-full flex-col text-sm">
             {conversations?.results.map((conversation) => {
               const isLastMessageFromOperator =
-                conversation.lastMessage?.message?.role !== "user";
+                conversation.lastMessage?.message?.role === "assistant";
 
               const country = getCountryFromTimezone(
                 conversation.contactSession.metadata?.timezone
@@ -123,7 +133,7 @@ export const ConversationsPanel = () => {
               return (
                 <Link
                   className={cn(
-                    "relative flex cursor-pointer items-start gap-3 border-b p-4 py-5 text-sm leading-tight hover:bg-accent hover:text-accent-foreground",
+                    "relative flex min-w-0 max-w-full cursor-pointer items-start gap-3 overflow-hidden border-b p-4 py-5 text-sm leading-tight hover:bg-accent hover:text-accent-foreground",
                     pathname === `/conversations/${conversation._id}` &&
                       "bg-accent text-accent-foreground"
                   )}
@@ -143,18 +153,18 @@ export const ConversationsPanel = () => {
                     seed={conversation.contactSession._id}
                     size={40}
                   />
-                  <div className="flex-1">
-                    <div className="flex w-full items-center gap-2">
-                      <span className="truncate font-bold">
+                  <div className="min-w-0 flex-1 overflow-hidden">
+                    <div className="flex min-w-0 w-full items-center gap-2">
+                      <span className="min-w-0 truncate font-bold">
                         {conversation.contactSession.name}
                       </span>
-                      <span className="ml-auto shrink-0 text-muted-foreground text-xs">
+                      <span className="ml-auto shrink-0 text-muted-foreground text-xs tabular-nums">
                         {formatDistanceToNow(
                           new Date(conversation._creationTime)
                         )}
                       </span>
                     </div>
-                    <div className="mt-1 flex items-center justify-between gap-2">
+                    <div className="mt-1 flex min-w-0 items-center justify-between gap-2">
                       <div className="flex w-0 grow items-center gap-1">
                         {isLastMessageFromOperator && (
                           <CornerUpLeftIcon className="size-3 shrink-0 text-muted-foreground" />
@@ -180,9 +190,10 @@ export const ConversationsPanel = () => {
               isLoadingMore={isLoadingMore}
               onLoadMore={handleLoadMore}
               ref={topElementRef}
+              showExhaustedHint={false}
             />
           </div>
-        </ScrollArea>
+        </div>
       )}
     </div>
   );
@@ -190,8 +201,8 @@ export const ConversationsPanel = () => {
 
 export const SkeletonConversations = () => {
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-auto">
-      <div className="relative flex w-full min-w-0 flex-col p-2">
+    <div className="flex flex-col gap-2 p-2">
+      <div className="relative flex w-full min-w-0 flex-col">
         <div className="w-full space-y-2">
           {Array.from({ length: 8 }).map((_, index) => (
             <div

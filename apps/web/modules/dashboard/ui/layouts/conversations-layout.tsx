@@ -14,14 +14,36 @@ export const ConversationsLayout = ({
   children: React.ReactNode;
 }) => {
   return (
-    <ResizablePanelGroup className="h-full flex-1" orientation="horizontal">
-      <ResizablePanel defaultSize={30} maxSize={30} minSize={20}>
+    <div className="flex min-h-0 min-w-0 w-full flex-1 flex-col">
+    <ResizablePanelGroup
+      defaultLayout={[40, 60]}
+      className="min-h-0 min-w-0 w-full max-w-full flex-1 overflow-x-hidden"
+      id="conversations-split-v4"
+      orientation="horizontal"
+    >
+      <ResizablePanel
+        className="flex min-h-0 min-w-0 flex-col overflow-hidden"
+        defaultSize={44}
+        id="conversations-list-panel"
+        minSize={12}
+        style={{ overflow: "hidden" }}
+      >
         <ConversationsPanel />
       </ResizablePanel>
-      <ResizableHandle />
-      <ResizablePanel className="h-full" defaultSize={70}>
+      <ResizableHandle
+        className="w-2.5 min-w-2.5 max-w-2.5 shrink-0 bg-border after:w-3"
+        withHandle
+      />
+      <ResizablePanel
+        className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
+        defaultSize={56}
+        id="conversations-chat-panel"
+        minSize={20}
+        style={{ overflow: "hidden" }}
+      >
         {children}
       </ResizablePanel>
     </ResizablePanelGroup>
+    </div>
   );
 };

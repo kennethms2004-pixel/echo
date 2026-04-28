@@ -18,8 +18,20 @@ export const validate = action({
       });
 
       return { valid: true };
-    } catch {
-      return { valid: false, reason: "Organization not found" };
+    } catch (error: unknown) {
+      const status =
+        error &&
+        typeof error === "object" &&
+        "status" in error &&
+        typeof (error as { status: unknown }).status === "number"
+          ? (error as { status: number }).status
+          : undefined;
+
+      if (status === 404) {
+        return { valid: false, reason: "Organization not found" };
+      }
+
+      throw error;
     }
   }
 });

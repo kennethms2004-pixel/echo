@@ -83,6 +83,7 @@ export const WidgetChatScreen = () => {
   const createMessage = useAction(api.public.messages.create);
 
   const form = useForm<z.infer<typeof formSchema>>({
+    mode: "onChange",
     resolver: zodResolver(formSchema),
     defaultValues: { message: "" }
   });
@@ -92,13 +93,13 @@ export const WidgetChatScreen = () => {
       return;
     }
 
-    form.reset();
-
     await createMessage({
       threadId: conversation.threadId,
       prompt: values.message,
       contactSessionId
     });
+
+    form.reset();
   };
 
   const onBack = () => {

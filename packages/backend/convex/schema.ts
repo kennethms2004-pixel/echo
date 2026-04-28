@@ -34,6 +34,14 @@ export default defineSchema({
       v.literal("unresolved"),
       v.literal("escalated"),
       v.literal("resolved")
+    ),
+    lastMessageSnapshot: v.optional(
+      v.object({
+        text: v.optional(v.string()),
+        message: v.object({
+          role: v.string()
+        })
+      })
     )
   })
     .index("by_organization_id", ["organizationId"])

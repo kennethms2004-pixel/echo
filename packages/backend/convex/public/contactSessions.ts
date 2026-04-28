@@ -80,13 +80,14 @@ export const create = mutation({
       args.metadata?.timezone ?? "unknown"
     ].join("|");
 
+    // Single mutation: Convex runs this handler atomically (read + insert are one transaction).
     const recentSessions = await ctx.db
       .query("contactSessions")
       .withIndex("by_organization_id", (q) =>
         q.eq("organizationId", args.organizationId)
       )
       .filter((q) => q.gt(q.field("_creationTime"), recentWindowStart))
-      .take(100);
+      .collect();
 
     const recentSessionCountForRequester = recentSessions.filter((session) => {
       const sessionFingerprint = [

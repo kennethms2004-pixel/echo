@@ -35,7 +35,7 @@ const components: Options["components"] = {
   a: ({ children, className, ...props }) => (
     <a
       className={cn("font-medium text-primary underline", className)}
-      rel="noreferrer"
+      rel="noopener noreferrer"
       target="_blank"
       {...props}
     >
@@ -84,24 +84,35 @@ const components: Options["components"] = {
 };
 
 export const AIResponse = memo(
-  ({ className, options, children, ...props }: AIResponseProps) => (
-    <div
-      className={cn(
-        "size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
-        className,
-      )}
-      {...props}
-    >
-      <ReactMarkdown
-        components={components}
-        remarkPlugins={[remarkGfm]}
-        {...options}
+  ({ className, options, children, ...props }: AIResponseProps) => {
+    const {
+      components: _omitComponents,
+      remarkPlugins: _omitRemark,
+      ...markdownOptions
+    } = options ?? {};
+
+    return (
+      <div
+        className={cn(
+          "min-w-0 w-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
+          className,
+        )}
+        {...props}
       >
-        {children}
-      </ReactMarkdown>
-    </div>
-  ),
-  (prevProps, nextProps) => prevProps.children === nextProps.children,
+        <ReactMarkdown
+          {...markdownOptions}
+          components={components}
+          remarkPlugins={[remarkGfm]}
+        >
+          {children}
+        </ReactMarkdown>
+      </div>
+    );
+  },
+  (prevProps, nextProps) =>
+    prevProps.children === nextProps.children &&
+    prevProps.className === nextProps.className &&
+    JSON.stringify(prevProps.options) === JSON.stringify(nextProps.options),
 );
 
 AIResponse.displayName = "AIResponse";

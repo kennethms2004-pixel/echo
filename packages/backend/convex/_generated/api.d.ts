@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as lib_clerkOrg from "../lib/clerkOrg.js";
 import type * as private_conversations from "../private/conversations.js";
 import type * as private_messages from "../private/messages.js";
 import type * as public_contactSessions from "../public/contactSessions.js";
@@ -36,6 +37,7 @@ import type {
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  "lib/clerkOrg": typeof lib_clerkOrg;
   "private/conversations": typeof private_conversations;
   "private/messages": typeof private_messages;
   "public/contactSessions": typeof public_contactSessions;

@@ -21,11 +21,11 @@ export const WidgetView = ({ organizationId }: Props) => {
     loading: <WidgetLoadingScreen organizationId={organizationId} />,
     error: <WidgetErrorScreen />,
     selection: <WidgetSelectionScreen />,
-    voice: <p>TODO: Voice</p>,
+    voice: <WidgetSelectionScreen />,
     auth: <WidgetAuthScreen organizationId={organizationId} />,
     inbox: <WidgetInboxScreen />,
     chat: <WidgetChatScreen />,
-    contact: <p>TODO: Contact</p>,
+    contact: <WidgetSelectionScreen />,
   };
 
   return (

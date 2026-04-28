@@ -16,7 +16,7 @@ import {
 } from "@/modules/widget/atoms/widget-atoms";
 import { WidgetHeader } from "@/modules/widget/ui/components/widget-header";
 
-type InitStep = "organization" | "session" | "settings" | "vapi" | "done";
+type InitStep = "organization" | "session" | "done";
 
 interface Props {
   organizationId: string | null;

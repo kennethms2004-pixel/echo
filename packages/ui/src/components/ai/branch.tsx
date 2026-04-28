@@ -2,7 +2,7 @@
 
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import type { HTMLAttributes, ReactElement, ReactNode } from "react";
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { Button } from "@workspace/ui/components/button";
 import { cn } from "@workspace/ui/lib/utils";
 
@@ -36,6 +36,7 @@ export const AIBranch = ({
   defaultBranch = 0,
   onBranchChange,
   className,
+  children,
   ...props
 }: AIBranchProps) => {
   const [currentBranch, setCurrentBranch] = useState(defaultBranch);
@@ -72,7 +73,9 @@ export const AIBranch = ({
       <div
         className={cn("grid w-full gap-2 [&>div]:pb-0", className)}
         {...props}
-      />
+      >
+        {children}
+      </div>
     </AIBranchContext.Provider>
   );
 };
@@ -83,11 +86,16 @@ export type AIBranchMessagesProps = {
 
 export const AIBranchMessages = ({ children }: AIBranchMessagesProps) => {
   const { currentBranch, setBranches, branches } = useAIBranch();
-  const childrenArray = Array.isArray(children) ? children : [children];
+  const childrenArray = useMemo(
+    () => (Array.isArray(children) ? children : [children]),
+    [children],
+  );
 
   // Use useEffect to update branches when they change
   useEffect(() => {
-    if (branches.length !== childrenArray.length) {
+    const lengthMismatch = branches.length !== childrenArray.length;
+    const contentMismatch = childrenArray.some((b, i) => b !== branches[i]);
+    if (lengthMismatch || contentMismatch) {
       setBranches(childrenArray);
     }
   }, [childrenArray, branches, setBranches]);

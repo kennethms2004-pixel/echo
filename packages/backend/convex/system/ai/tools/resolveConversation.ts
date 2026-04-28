@@ -9,19 +9,27 @@ export const resolveConversationTool = createTool({
   args: z.object({}),
   handler: async (ctx, _args) => {
     if (!ctx.threadId) {
-      return "Missing thread ID";
+      throw new Error("Missing thread ID");
     }
 
     await ctx.runMutation(internal.system.conversations.resolve, {
       threadId: ctx.threadId
     });
 
+    const content = "Conversation resolved.";
+
     await supportAgent.saveMessage(ctx, {
       threadId: ctx.threadId,
       message: {
         role: "assistant",
-        content: "Conversation resolved."
+        content
       }
+    });
+
+    await ctx.runMutation(internal.system.conversations.patchLastMessageSnapshot, {
+      threadId: ctx.threadId,
+      text: content,
+      messageRole: "assistant"
     });
 
     return "Conversation resolved.";

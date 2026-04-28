@@ -3,18 +3,13 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toUIMessages, useThreadMessages } from "@convex-dev/agent/react";
 import { useAction, useMutation, useQuery } from "convex/react";
-import { MoreHorizontalIcon, Wand2Icon } from "lucide-react";
-import { useState } from "react";
+import { ArrowDownIcon, MoreHorizontalIcon, Wand2Icon } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
 import { api } from "@workspace/backend/_generated/api";
 import type { Id } from "@workspace/backend/_generated/dataModel";
-import {
-  AIConversation,
-  AIConversationContent,
-  AIConversationScrollButton,
-} from "@workspace/ui/components/ai/conversation";
 import {
   AIInput,
   AIInputButton,
@@ -50,38 +45,39 @@ export const ConversationIdViewLoading = () => {
   const widths = ["w-[48%]", "w-[60%]", "w-[72%]"];
 
   return (
-    <div className="flex h-full flex-col bg-muted">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-muted">
       <header className="flex items-center justify-between border-b bg-background p-2.5">
         <Button size="sm" variant="ghost">
           <MoreHorizontalIcon />
         </Button>
       </header>
-      <AIConversation className="max-h-[calc(100vh-180px)]">
-        <AIConversationContent>
-          {Array.from({ length: 8 }).map((_, index) => {
-            const isUser = index % 2 === 1;
-            const width =
-              widths[index % widths.length] ?? ("w-[60%]" as string);
+      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-background">
+        <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-y-auto [-webkit-overflow-scrolling:touch]">
+          <div className="mx-auto min-w-0 w-full max-w-3xl px-4 py-4 sm:px-6">
+            {Array.from({ length: 8 }).map((_, index) => {
+              const isUser = index % 2 === 1;
+              const width =
+                widths[index % widths.length] ?? ("w-[60%]" as string);
 
-            return (
-              <div
-                className={cn(
-                  "group flex w-full items-end justify-end gap-2 py-2",
-                  "[&>div]:max-w-[80%]",
-                  isUser ? "is-user" : "is-assistant flex-row-reverse justify-end",
-                )}
-                key={index}
-              >
-                <Skeleton
-                  className={cn("h-9 rounded-lg bg-neutral-200", width)}
-                />
-                <Skeleton className="size-8 rounded-full bg-neutral-200" />
-              </div>
-            );
-          })}
-        </AIConversationContent>
-        <AIConversationScrollButton />
-      </AIConversation>
+              return (
+                <div
+                  className={cn(
+                    "group flex w-full items-end justify-end gap-2 py-2",
+                    "[&>div]:max-w-[80%]",
+                    isUser ? "is-user" : "is-assistant flex-row-reverse justify-end",
+                  )}
+                  key={index}
+                >
+                  <Skeleton
+                    className={cn("h-9 rounded-lg bg-neutral-200", width)}
+                  />
+                  <Skeleton className="size-8 rounded-full bg-neutral-200" />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
       <div className="p-2">
         <AIInput>
           <AIInputTextarea
@@ -113,6 +109,15 @@ export const ConversationIdView = ({
     { initialNumItems: 10 },
   );
 
+  const threadScrollRef = useRef<HTMLDivElement | null>(null);
+  const [threadScrollRoot, setThreadScrollRoot] =
+    useState<HTMLElement | null>(null);
+
+  const setThreadScrollEl = useCallback((el: HTMLDivElement | null) => {
+    threadScrollRef.current = el;
+    setThreadScrollRoot(el);
+  }, []);
+
   const {
     canLoadMore,
     handleLoadMore,
@@ -123,6 +128,7 @@ export const ConversationIdView = ({
     status: threadMessages.status,
     loadMore: threadMessages.loadMore,
     loadSize: 10,
+    intersectionRoot: threadScrollRoot,
   });
 
   const createMessage = useMutation(api.private.messages.create);
@@ -133,8 +139,30 @@ export const ConversationIdView = ({
 
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [showJumpToBottom, setShowJumpToBottom] = useState(false);
+
+  useEffect(() => {
+    const el = threadScrollRef.current;
+    if (!el) {
+      return;
+    }
+    const update = () => {
+      const { scrollTop, scrollHeight, clientHeight } = el;
+      const gap = scrollHeight - scrollTop - clientHeight;
+      setShowJumpToBottom(gap > 80);
+    };
+    update();
+    el.addEventListener("scroll", update, { passive: true });
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => {
+      el.removeEventListener("scroll", update);
+      ro.disconnect();
+    };
+  }, [conversation?._id, threadMessages.results?.length]);
 
   const form = useForm<z.infer<typeof formSchema>>({
+    mode: "onChange",
     resolver: zodResolver(formSchema),
     defaultValues: { message: "" },
   });
@@ -206,45 +234,85 @@ export const ConversationIdView = ({
   const uiMessages = toUIMessages(threadMessages.results ?? []);
 
   return (
-    <div className="flex h-full flex-col bg-muted">
-      <header className="flex items-center justify-between border-b bg-background p-2.5">
+    <div
+      className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-muted/60"
+    >
+      <header className="flex shrink-0 items-center gap-3 border-b bg-background px-3 py-2.5 sm:px-4">
         <Button size="sm" variant="ghost">
           <MoreHorizontalIcon />
         </Button>
+        <div className="min-w-0 flex-1 text-center">
+          <p className="truncate font-medium text-foreground text-sm">
+            {conversation.contactSession.name}
+          </p>
+          <p className="truncate text-muted-foreground text-xs">
+            {conversation.contactSession.email}
+          </p>
+        </div>
         <ConversationStatusButton
           disabled={isUpdatingStatus}
           onClick={handleToggleStatus}
           status={conversation.status}
         />
       </header>
-      <AIConversation className="max-h-[calc(100vh-180px)]">
-        <AIConversationContent>
-          <InfiniteScrollTrigger
-            ref={topElementRef}
-            canLoadMore={canLoadMore}
-            isLoadingMore={isLoadingMore}
-            onLoadMore={handleLoadMore}
-          />
-          {uiMessages.map((message) => (
-            <AIMessage
-              from={message.role === "user" ? "assistant" : "user"}
-              key={message.id}
-            >
-              <AIMessageContent>
-                <AIResponse>{message.content}</AIResponse>
-              </AIMessageContent>
-              {message.role === "user" && (
-                <DicebearAvatar
-                  seed={conversation.contactSession._id}
-                  size={32}
-                />
-              )}
-            </AIMessage>
-          ))}
-        </AIConversationContent>
-        <AIConversationScrollButton />
-      </AIConversation>
-      <div className="p-2">
+      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-background">
+        <div
+          ref={setThreadScrollEl}
+          className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-y-auto [-webkit-overflow-scrolling:touch]"
+          data-thread-scroll
+          role="log"
+        >
+          <div className="mx-auto flex min-h-min min-w-0 w-full max-w-3xl flex-col overflow-x-hidden px-4 py-4 sm:px-6">
+            <InfiniteScrollTrigger
+              ref={topElementRef}
+              canLoadMore={canLoadMore}
+              isLoadingMore={isLoadingMore}
+              onLoadMore={handleLoadMore}
+            />
+            {uiMessages.map((message) => (
+              <AIMessage
+                from={message.role === "user" ? "assistant" : "user"}
+                key={message.id}
+              >
+                <AIMessageContent className="shadow-sm">
+                  <AIResponse className="text-[13px] leading-relaxed sm:text-sm">
+                    {message.content}
+                  </AIResponse>
+                </AIMessageContent>
+                {message.role === "user" ? (
+                  <DicebearAvatar
+                    seed={conversation.contactSession._id}
+                    size={32}
+                  />
+                ) : (
+                  <DicebearAvatar
+                    className="border-primary/25"
+                    seed={`operator-${conversationId}`}
+                    size={32}
+                  />
+                )}
+              </AIMessage>
+            ))}
+          </div>
+        </div>
+        {showJumpToBottom ? (
+          <Button
+            className="absolute bottom-4 left-[50%] z-10 translate-x-[-50%] rounded-full"
+            onClick={() => {
+              const el = threadScrollRef.current;
+              if (el) {
+                el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+              }
+            }}
+            size="icon"
+            type="button"
+            variant="outline"
+          >
+            <ArrowDownIcon />
+          </Button>
+        ) : null}
+      </div>
+      <div className="shrink-0 border-t bg-background px-3 py-2.5 sm:px-4">
         <Form {...form}>
           <AIInput onSubmit={form.handleSubmit(onSubmit)}>
             <FormField
@@ -258,6 +326,8 @@ export const ConversationIdView = ({
                     form.formState.isSubmitting ||
                     isEnhancing
                   }
+                  maxHeight={140}
+                  minHeight={44}
                   onChange={field.onChange}
                   onKeyDown={(event) => {
                     if (event.key === "Enter" && !event.shiftKey) {

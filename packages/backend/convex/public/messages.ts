@@ -38,6 +38,16 @@ export const create = action({
       });
     }
 
+    if (
+      conversation.contactSessionId !== contactSession._id ||
+      conversation.organizationId !== contactSession.organizationId
+    ) {
+      throw new ConvexError({
+        code: "UNAUTHORIZED",
+        message: "Conversation does not belong to this session"
+      });
+    }
+
     if (conversation.status === "resolved") {
       throw new ConvexError({
         code: "BAD_REQUEST",
@@ -45,7 +55,8 @@ export const create = action({
       });
     }
 
-    // TODO: Implement subscription check
+    // TODO(entitlements): Gate on active subscription / plan (e.g. hasActiveSubscription(orgId))
+    // before agent runs or messages persist; add tests for allowed vs blocked once billing exists.
 
     const shouldTriggerAgent = conversation.status === "unresolved";
 
@@ -61,10 +72,30 @@ export const create = action({
           }
         }
       );
+
+      const latest = await ctx.runQuery(
+        internal.system.conversations.peekLatestMessageForThread,
+        { threadId: args.threadId }
+      );
+      if (latest) {
+        await ctx.runMutation(
+          internal.system.conversations.patchLastMessageSnapshot,
+          {
+            threadId: args.threadId,
+            text: latest.text,
+            messageRole: latest.messageRole
+          }
+        );
+      }
     } else {
       await supportAgent.saveMessage(ctx, {
         threadId: args.threadId,
-        prompt: args.prompt
+        message: { role: "user", content: args.prompt }
+      });
+      await ctx.runMutation(internal.system.conversations.patchLastMessageSnapshot, {
+        threadId: args.threadId,
+        text: args.prompt,
+        messageRole: "user"
       });
     }
   }
@@ -83,6 +114,22 @@ export const getMany = query({
       throw new ConvexError({
         code: "UNAUTHORIZED",
         message: "Invalid session"
+      });
+    }
+
+    const conversation = await ctx.db
+      .query("conversations")
+      .withIndex("by_thread_id", (q) => q.eq("threadId", args.threadId))
+      .unique();
+
+    if (
+      !conversation ||
+      conversation.contactSessionId !== contactSession._id ||
+      conversation.organizationId !== contactSession.organizationId
+    ) {
+      throw new ConvexError({
+        code: "UNAUTHORIZED",
+        message: "Incorrect session"
       });
     }
 
