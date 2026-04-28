@@ -10,7 +10,11 @@ export const OrganizationGuard = ({
 }: {
   children: React.ReactNode;
 }) => {
-  const { organization } = useOrganization();
+  const { organization, isLoaded } = useOrganization();
+
+  if (!isLoaded) {
+    return null;
+  }
 
   if (!organization) {
     return (

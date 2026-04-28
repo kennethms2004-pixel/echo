@@ -17,14 +17,18 @@ export default clerkMiddleware(async (auth, request) => {
   const { userId, orgId } = await auth();
 
   if (userId && !orgId && !isOrgFreeRoute(request)) {
-    const searchParams = new URLSearchParams({ redirectUrl: request.url });
+    const acceptsHtml = request.headers.get("accept")?.includes("text/html");
 
-    const orgSelection = new URL(
-      `/org-selection?${searchParams.toString()}`,
-      request.url
-    );
+    if (acceptsHtml) {
+      const searchParams = new URLSearchParams({ redirectUrl: request.url });
 
-    return NextResponse.redirect(orgSelection);
+      const orgSelection = new URL(
+        `/org-selection?${searchParams.toString()}`,
+        request.url
+      );
+
+      return NextResponse.redirect(orgSelection);
+    }
   }
 });
 

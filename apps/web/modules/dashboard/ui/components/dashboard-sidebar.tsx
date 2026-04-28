@@ -77,7 +77,7 @@ export const DashboardSidebar = () => {
       return pathname === url;
     }
 
-    return pathname.startsWith(url);
+    return pathname === url || pathname.startsWith(`${url}/`);
   };
 
   return (
