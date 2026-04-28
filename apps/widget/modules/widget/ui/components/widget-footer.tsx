@@ -1,29 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useAtomValue, useSetAtom } from "jotai";
 import { HomeIcon, InboxIcon } from "lucide-react";
 
 import { Button } from "@workspace/ui/components/button";
 import { cn } from "@workspace/ui/lib/utils";
 
+import { screenAtom } from "@/modules/widget/atoms/widget-atoms";
+
 export const WidgetFooter = () => {
-  const [screen, setScreen] = useState<"selection" | "inbox">("selection");
-
-  const handleSelectionClick = () => {
-    setScreen("selection");
-    // TODO: wire to chapter 12 state/router once screen management is centralized.
-  };
-
-  const handleInboxClick = () => {
-    setScreen("inbox");
-    // TODO: wire to chapter 12 state/router once screen management is centralized.
-  };
+  const screen = useAtomValue(screenAtom);
+  const setScreen = useSetAtom(screenAtom);
 
   return (
     <footer className="flex items-center justify-between border-t bg-background">
       <Button
         className="h-14 flex-1 rounded-none"
-        onClick={handleSelectionClick}
+        onClick={() => setScreen("selection")}
         size="icon"
         variant="ghost"
       >
@@ -33,7 +26,7 @@ export const WidgetFooter = () => {
       </Button>
       <Button
         className="h-14 flex-1 rounded-none"
-        onClick={handleInboxClick}
+        onClick={() => setScreen("inbox")}
         size="icon"
         variant="ghost"
       >

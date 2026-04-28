@@ -2,12 +2,19 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "convex/react";
+import { useAtomValue, useSetAtom } from "jotai";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
 import { api } from "@workspace/backend/_generated/api";
 import type { Doc } from "@workspace/backend/_generated/dataModel";
+
+import {
+  contactSessionIdAtomFamily,
+  organizationIdAtom,
+  screenAtom
+} from "@/modules/widget/atoms/widget-atoms";
 import { Button } from "@workspace/ui/components/button";
 import {
   Form,
@@ -31,7 +38,14 @@ interface WidgetAuthScreenProps {
   organizationId: string;
 }
 
-export const WidgetAuthScreen = ({ organizationId }: WidgetAuthScreenProps) => {
+export const WidgetAuthScreen = ({ organizationId: organizationIdProp }: WidgetAuthScreenProps) => {
+  const organizationIdFromAtom = useAtomValue(organizationIdAtom);
+  const organizationId = organizationIdFromAtom ?? organizationIdProp;
+  const setContactSessionId = useSetAtom(
+    contactSessionIdAtomFamily(organizationId || "")
+  );
+  const setScreen = useSetAtom(screenAtom);
+
   const createContactSession = useMutation(
     api.public.contactSessions.create
   );
@@ -87,7 +101,8 @@ export const WidgetAuthScreen = ({ organizationId }: WidgetAuthScreenProps) => {
         organizationId
       });
 
-      console.log({ contactSessionId });
+      setContactSessionId(contactSessionId);
+      setScreen("selection");
     } catch (error) {
       console.error("Failed to create contact session", error);
       setSubmitError(
