@@ -35,9 +35,9 @@ import { useInfiniteScroll } from "@workspace/ui/hooks/use-infinite-scroll";
 import {
   contactSessionIdAtomFamily,
   conversationIdAtom,
-  organizationIdAtom,
   screenAtom
 } from "@/modules/widget/atoms/widget-atoms";
+import { useWidgetOrganizationId } from "@/modules/widget/context/widget-organization-context";
 import { WidgetHeader } from "@/modules/widget/ui/components/widget-header";
 
 const formSchema = z.object({
@@ -49,9 +49,9 @@ export const WidgetChatScreen = () => {
   const setConversationId = useSetAtom(conversationIdAtom);
 
   const conversationId = useAtomValue(conversationIdAtom);
-  const organizationId = useAtomValue(organizationIdAtom);
+  const organizationId = useWidgetOrganizationId();
   const contactSessionId = useAtomValue(
-    contactSessionIdAtomFamily(organizationId || "")
+    contactSessionIdAtomFamily(organizationId)
   );
 
   const conversation = useQuery(
@@ -73,6 +73,7 @@ export const WidgetChatScreen = () => {
     topElementRef,
     handleLoadMore,
     canLoadMore,
+    isLoadingFirstPage,
     isLoadingMore
   } = useInfiniteScroll({
     status: messages.status,
@@ -107,6 +108,15 @@ export const WidgetChatScreen = () => {
     setScreen("selection");
   };
 
+  const waitingForConversation =
+    Boolean(conversationId && contactSessionId) && conversation === undefined;
+
+  const waitingForMessages =
+    Boolean(conversation?.threadId) &&
+    (messages.status === "LoadingFirstPage" || isLoadingFirstPage);
+
+  const showChatLoading = waitingForConversation || waitingForMessages;
+
   return (
     <>
       <WidgetHeader className="flex items-center justify-between">
@@ -122,29 +132,41 @@ export const WidgetChatScreen = () => {
       </WidgetHeader>
       <AIConversation>
         <AIConversationContent>
-          <InfiniteScrollTrigger
-            canLoadMore={canLoadMore}
-            isLoadingMore={isLoadingMore}
-            onLoadMore={handleLoadMore}
-            ref={topElementRef}
-          />
-          {toUIMessages(messages.results ?? []).map((message) => (
-            <AIMessage
-              from={message.role === "user" ? "user" : "assistant"}
-              key={message.id}
-            >
-              <AIMessageContent>
-                <AIResponse>{message.content}</AIResponse>
-              </AIMessageContent>
-              {message.role === "assistant" && (
-                <DicebearAvatar
-                  imageUrl="/logo.svg"
-                  seed="assistant"
-                  size={32}
-                />
-              )}
-            </AIMessage>
-          ))}
+          {showChatLoading ? (
+            <div className="text-muted-foreground flex flex-col items-center justify-center gap-2 py-12 text-center text-sm">
+              <span>
+                {waitingForConversation
+                  ? "Loading conversation…"
+                  : "Loading messages…"}
+              </span>
+            </div>
+          ) : (
+            <>
+              <InfiniteScrollTrigger
+                canLoadMore={canLoadMore}
+                isLoadingMore={isLoadingMore}
+                onLoadMore={handleLoadMore}
+                ref={topElementRef}
+              />
+              {toUIMessages(messages.results ?? []).map((message) => (
+                <AIMessage
+                  from={message.role === "user" ? "user" : "assistant"}
+                  key={message.id}
+                >
+                  <AIMessageContent>
+                    <AIResponse>{message.content}</AIResponse>
+                  </AIMessageContent>
+                  {message.role === "assistant" && (
+                    <DicebearAvatar
+                      imageUrl="/logo.svg"
+                      seed="assistant"
+                      size={32}
+                    />
+                  )}
+                </AIMessage>
+              ))}
+            </>
+          )}
         </AIConversationContent>
         <AIConversationScrollButton />
         {/* TODO: add suggestions */}

@@ -3,7 +3,7 @@
 import { useAction, useMutation } from "convex/react";
 import { useAtomValue, useSetAtom } from "jotai";
 import { LoaderIcon } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 
 import { api } from "@workspace/backend/_generated/api";
 
@@ -11,26 +11,52 @@ import {
   contactSessionIdAtomFamily,
   errorMessageAtom,
   loadingMessageAtom,
-  organizationIdAtom,
   screenAtom
 } from "@/modules/widget/atoms/widget-atoms";
 import { WidgetHeader } from "@/modules/widget/ui/components/widget-header";
 
 type InitStep = "organization" | "session" | "done";
 
+const BACKEND_TIMEOUT_MS = 25_000;
+
 interface Props {
   organizationId: string | null;
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const id = setTimeout(() => {
+      reject(
+        new Error(
+          `Request timed out after ${ms / 1000}s. Is Convex running and NEXT_PUBLIC_CONVEX_URL correct?`
+        )
+      );
+    }, ms);
+    promise
+      .then((v) => {
+        clearTimeout(id);
+        resolve(v);
+      })
+      .catch((e) => {
+        clearTimeout(id);
+        reject(e);
+      });
+  });
 }
 
 export const WidgetLoadingScreen = ({ organizationId }: Props) => {
   const [step, setStep] = useState<InitStep>("organization");
   const [sessionValid, setSessionValid] = useState(false);
 
+  useEffect(() => {
+    setStep("organization");
+    setSessionValid(false);
+  }, [organizationId]);
+
   const loadingMessage = useAtomValue(loadingMessageAtom);
   const setLoadingMessage = useSetAtom(loadingMessageAtom);
   const setErrorMessage = useSetAtom(errorMessageAtom);
   const setScreen = useSetAtom(screenAtom);
-  const setOrganizationId = useSetAtom(organizationIdAtom);
 
   const contactSessionId = useAtomValue(
     contactSessionIdAtomFamily(organizationId || "")
@@ -39,12 +65,16 @@ export const WidgetLoadingScreen = ({ organizationId }: Props) => {
   // Step 1: Validate organization
   const validateOrganization = useAction(api.public.organizations.validate);
 
+  useLayoutEffect(() => {
+    setLoadingMessage("Connecting to backend…");
+  }, [setLoadingMessage]);
+
   useEffect(() => {
     if (step !== "organization") {
       return;
     }
 
-    setLoadingMessage("Finding organization ID...");
+    setLoadingMessage("Finding organization ID…");
 
     if (!organizationId) {
       setErrorMessage("Organization ID is required");
@@ -52,20 +82,24 @@ export const WidgetLoadingScreen = ({ organizationId }: Props) => {
       return;
     }
 
-    setLoadingMessage("Verifying organization...");
+    setLoadingMessage("Verifying organization with Clerk…");
 
-    validateOrganization({ organizationId })
+    void withTimeout(
+      validateOrganization({ organizationId }),
+      BACKEND_TIMEOUT_MS
+    )
       .then((result) => {
         if (result.valid) {
-          setOrganizationId(organizationId);
           setStep("session");
         } else {
           setErrorMessage(result.reason || "Invalid configuration");
           setScreen("error");
         }
       })
-      .catch(() => {
-        setErrorMessage("Unable to verify organization");
+      .catch((err: unknown) => {
+        const message =
+          err instanceof Error ? err.message : "Unable to verify organization";
+        setErrorMessage(message);
         setScreen("error");
       });
   }, [
@@ -73,7 +107,6 @@ export const WidgetLoadingScreen = ({ organizationId }: Props) => {
     organizationId,
     setErrorMessage,
     setScreen,
-    setOrganizationId,
     setLoadingMessage,
     validateOrganization
   ]);
@@ -88,7 +121,7 @@ export const WidgetLoadingScreen = ({ organizationId }: Props) => {
       return;
     }
 
-    setLoadingMessage("Finding contact session ID...");
+    setLoadingMessage("Finding contact session…");
 
     if (!contactSessionId) {
       setSessionValid(false);
@@ -96,9 +129,12 @@ export const WidgetLoadingScreen = ({ organizationId }: Props) => {
       return;
     }
 
-    setLoadingMessage("Validating session...");
+    setLoadingMessage("Validating session…");
 
-    validateContactSession({ contactSessionId })
+    void withTimeout(
+      validateContactSession({ contactSessionId }),
+      BACKEND_TIMEOUT_MS
+    )
       .then((result) => {
         setSessionValid(result.valid);
         setStep("done");
