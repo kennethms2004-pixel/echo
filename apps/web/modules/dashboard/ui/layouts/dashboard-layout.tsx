@@ -1,3 +1,4 @@
+import { Provider } from "jotai";
 import { cookies } from "next/headers";
 
 import {
@@ -20,12 +21,14 @@ export const DashboardLayout = async ({
   return (
     <AuthGuard>
       <OrganizationGuard>
-        <SidebarProvider defaultOpen={defaultOpen}>
-          <DashboardSidebar />
-          <SidebarInset>
-            <main className="flex flex-1 flex-col">{children}</main>
-          </SidebarInset>
-        </SidebarProvider>
+        <Provider>
+          <SidebarProvider defaultOpen={defaultOpen}>
+            <DashboardSidebar />
+            <SidebarInset>
+              <main className="flex flex-1 flex-col">{children}</main>
+            </SidebarInset>
+          </SidebarProvider>
+        </Provider>
       </OrganizationGuard>
     </AuthGuard>
   );
