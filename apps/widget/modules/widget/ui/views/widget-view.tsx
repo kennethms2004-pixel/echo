@@ -1,25 +1,16 @@
 "use client";
 
-import { WidgetFooter } from "@/modules/widget/ui/components/widget-footer";
-import { WidgetHeader } from "@/modules/widget/ui/components/widget-header";
+import { WidgetAuthScreen } from "@/modules/widget/ui/screens/widget-auth-screen";
 
 interface Props {
   organizationId: string;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const WidgetView = ({ organizationId }: Props) => {
   return (
     <main className="flex h-full w-full flex-col overflow-hidden rounded-xl border bg-muted">
-      <WidgetHeader>
-        <div className="flex flex-col justify-between gap-y-2 px-2 py-6 font-semibold">
-          <p className="text-3xl">Hi there 👋</p>
-          <p className="text-lg">How can we help you today?</p>
-        </div>
-      </WidgetHeader>
-      <div className="flex flex-1 flex-col h-full">
-        Widget view {organizationId}
-      </div>
-      <WidgetFooter />
+      <WidgetAuthScreen />
     </main>
   );
 };
