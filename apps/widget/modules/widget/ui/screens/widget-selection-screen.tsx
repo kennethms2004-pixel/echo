@@ -12,9 +12,9 @@ import {
   contactSessionIdAtomFamily,
   conversationIdAtom,
   errorMessageAtom,
-  organizationIdAtom,
   screenAtom
 } from "@/modules/widget/atoms/widget-atoms";
+import { useWidgetOrganizationId } from "@/modules/widget/context/widget-organization-context";
 import { WidgetFooter } from "@/modules/widget/ui/components/widget-footer";
 import { WidgetHeader } from "@/modules/widget/ui/components/widget-header";
 
@@ -22,9 +22,9 @@ export const WidgetSelectionScreen = () => {
   const setScreen = useSetAtom(screenAtom);
   const setErrorMessage = useSetAtom(errorMessageAtom);
   const setConversationId = useSetAtom(conversationIdAtom);
-  const organizationId = useAtomValue(organizationIdAtom);
+  const organizationId = useWidgetOrganizationId();
   const contactSessionId = useAtomValue(
-    contactSessionIdAtomFamily(organizationId || "")
+    contactSessionIdAtomFamily(organizationId)
   );
 
   const createConversation = useMutation(api.public.conversations.create);

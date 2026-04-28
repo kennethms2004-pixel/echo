@@ -50,7 +50,7 @@ export const AISuggestion = ({
       variant={variant}
       {...props}
     >
-      {children || suggestion}
+      {children ?? suggestion}
     </Button>
   );
 };

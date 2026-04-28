@@ -3,7 +3,7 @@
 import { useAction, useMutation } from "convex/react";
 import { useAtomValue, useSetAtom } from "jotai";
 import { LoaderIcon } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef } from "react";
 
 import { api } from "@workspace/backend/_generated/api";
 
@@ -11,113 +11,128 @@ import {
   contactSessionIdAtomFamily,
   errorMessageAtom,
   loadingMessageAtom,
-  organizationIdAtom,
   screenAtom
 } from "@/modules/widget/atoms/widget-atoms";
 import { WidgetHeader } from "@/modules/widget/ui/components/widget-header";
 
-type InitStep = "organization" | "session" | "settings" | "vapi" | "done";
+const BACKEND_TIMEOUT_MS = 25_000;
 
 interface Props {
   organizationId: string | null;
 }
 
-export const WidgetLoadingScreen = ({ organizationId }: Props) => {
-  const [step, setStep] = useState<InitStep>("organization");
-  const [sessionValid, setSessionValid] = useState(false);
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const id = setTimeout(() => {
+      reject(
+        new Error(
+          `Request timed out after ${ms / 1000}s. Is Convex running and NEXT_PUBLIC_CONVEX_URL correct?`
+        )
+      );
+    }, ms);
+    promise
+      .then((v) => {
+        clearTimeout(id);
+        resolve(v);
+      })
+      .catch((e) => {
+        clearTimeout(id);
+        reject(e);
+      });
+  });
+}
 
+export const WidgetLoadingScreen = ({ organizationId }: Props) => {
   const loadingMessage = useAtomValue(loadingMessageAtom);
   const setLoadingMessage = useSetAtom(loadingMessageAtom);
   const setErrorMessage = useSetAtom(errorMessageAtom);
   const setScreen = useSetAtom(screenAtom);
-  const setOrganizationId = useSetAtom(organizationIdAtom);
 
   const contactSessionId = useAtomValue(
     contactSessionIdAtomFamily(organizationId || "")
   );
 
-  // Step 1: Validate organization
   const validateOrganization = useAction(api.public.organizations.validate);
-
-  useEffect(() => {
-    if (step !== "organization") {
-      return;
-    }
-
-    setLoadingMessage("Finding organization ID...");
-
-    if (!organizationId) {
-      setErrorMessage("Organization ID is required");
-      setScreen("error");
-      return;
-    }
-
-    setLoadingMessage("Verifying organization...");
-
-    validateOrganization({ organizationId })
-      .then((result) => {
-        if (result.valid) {
-          setOrganizationId(organizationId);
-          setStep("session");
-        } else {
-          setErrorMessage(result.reason || "Invalid configuration");
-          setScreen("error");
-        }
-      })
-      .catch(() => {
-        setErrorMessage("Unable to verify organization");
-        setScreen("error");
-      });
-  }, [
-    step,
-    organizationId,
-    setErrorMessage,
-    setScreen,
-    setOrganizationId,
-    setLoadingMessage,
-    validateOrganization
-  ]);
-
-  // Step 2: Validate session if it exists
   const validateContactSession = useMutation(
     api.public.contactSessions.validate
   );
 
+  // Refs so the init effect can read the latest values without re-running.
+  const contactSessionIdRef = useRef(contactSessionId);
+  contactSessionIdRef.current = contactSessionId;
+  const validateOrganizationRef = useRef(validateOrganization);
+  validateOrganizationRef.current = validateOrganization;
+  const validateContactSessionRef = useRef(validateContactSession);
+  validateContactSessionRef.current = validateContactSession;
+
   useEffect(() => {
-    if (step !== "session") {
-      return;
-    }
+    let cancelled = false;
 
-    setLoadingMessage("Finding contact session ID...");
+    const run = async () => {
+      setLoadingMessage("Connecting to backend…");
 
-    if (!contactSessionId) {
-      setSessionValid(false);
-      setStep("done");
-      return;
-    }
+      if (!organizationId) {
+        if (cancelled) return;
+        setErrorMessage("Organization ID is required");
+        setScreen("error");
+        return;
+      }
 
-    setLoadingMessage("Validating session...");
+      // 1. Validate organization with Clerk (via Convex action).
+      try {
+        setLoadingMessage("Verifying organization with Clerk…");
+        const result = await withTimeout(
+          validateOrganizationRef.current({ organizationId }),
+          BACKEND_TIMEOUT_MS
+        );
+        if (cancelled) return;
+        if (!result.valid) {
+          setErrorMessage(result.reason || "Invalid configuration");
+          setScreen("error");
+          return;
+        }
+      } catch (err) {
+        if (cancelled) return;
+        console.error("[widget] validateOrganization failed", err);
+        setErrorMessage(
+          err instanceof Error ? err.message : "Unable to verify organization"
+        );
+        setScreen("error");
+        return;
+      }
 
-    validateContactSession({ contactSessionId })
-      .then((result) => {
-        setSessionValid(result.valid);
-        setStep("done");
-      })
-      .catch(() => {
-        setSessionValid(false);
-        setStep("done");
-      });
-  }, [step, contactSessionId, validateContactSession, setLoadingMessage]);
+      // 2. If a contact session is cached for this org, validate it.
+      const cachedSessionId = contactSessionIdRef.current;
+      if (!cachedSessionId) {
+        if (cancelled) return;
+        setScreen("auth");
+        return;
+      }
 
-  // Final step: Route to next screen
-  useEffect(() => {
-    if (step !== "done") {
-      return;
-    }
+      try {
+        setLoadingMessage("Validating session…");
+        const result = await withTimeout(
+          validateContactSessionRef.current({ contactSessionId: cachedSessionId }),
+          BACKEND_TIMEOUT_MS
+        );
+        if (cancelled) return;
+        setScreen(result.valid ? "selection" : "auth");
+      } catch (err) {
+        if (cancelled) return;
+        console.error("[widget] validateContactSession failed", err);
+        setScreen("auth");
+      }
+    };
 
-    const hasValidSession = contactSessionId && sessionValid;
-    setScreen(hasValidSession ? "selection" : "auth");
-  }, [step, contactSessionId, sessionValid, setScreen]);
+    void run();
+
+    return () => {
+      cancelled = true;
+    };
+    // Intentionally only re-run when organizationId changes — refs cover the
+    // mutable convex hooks so we don't restart init on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [organizationId]);
 
   return (
     <>

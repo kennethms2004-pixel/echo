@@ -14,6 +14,8 @@ function ResizablePanelGroup({
       data-slot="resizable-panel-group"
       className={cn(
         "flex h-full w-full aria-[orientation=vertical]:flex-col",
+        // Library sets inline touch-action (pan-y / pan-x); !important lets nested scrollers + trackpad feel normal.
+        "!touch-auto",
         className
       )}
       {...props}
@@ -21,8 +23,20 @@ function ResizablePanelGroup({
   )
 }
 
-function ResizablePanel({ ...props }: ResizablePrimitive.PanelProps) {
-  return <ResizablePrimitive.Panel data-slot="resizable-panel" {...props} />
+function ResizablePanel({
+  className,
+  ...props
+}: ResizablePrimitive.PanelProps) {
+  return (
+    <ResizablePrimitive.Panel
+      className={cn(
+        "!touch-auto",
+        className
+      )}
+      data-slot="resizable-panel"
+      {...props}
+    />
+  )
 }
 
 function ResizableHandle({

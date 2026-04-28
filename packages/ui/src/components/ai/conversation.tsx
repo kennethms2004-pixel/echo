@@ -14,9 +14,12 @@ export const AIConversation = ({
   ...props
 }: AIConversationProps) => (
   <StickToBottom
-    className={cn("relative flex-1 overflow-y-auto", className)}
+    className={cn(
+      "relative min-h-0 flex-1 overflow-hidden",
+      className
+    )}
     initial="smooth"
-    resize="smooth"
+    resize="instant"
     role="log"
     {...props}
   />
@@ -28,9 +31,20 @@ export type AIConversationContentProps = ComponentProps<
 
 export const AIConversationContent = ({
   className,
+  scrollClassName,
   ...props
 }: AIConversationContentProps) => (
-  <StickToBottom.Content className={cn("p-4", className)} {...props} />
+  <StickToBottom.Content
+    className={cn(
+      "mx-auto min-w-0 w-full max-w-3xl overflow-x-hidden px-4 py-4 sm:px-6",
+      className
+    )}
+    scrollClassName={cn(
+      "min-w-0 overflow-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]",
+      scrollClassName
+    )}
+    {...props}
+  />
 );
 
 export const AIConversationScrollButton = () => {

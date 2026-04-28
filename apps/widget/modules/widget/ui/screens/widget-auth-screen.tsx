@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "convex/react";
-import { useAtomValue, useSetAtom } from "jotai";
+import { useSetAtom } from "jotai";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -12,9 +12,9 @@ import type { Doc } from "@workspace/backend/_generated/dataModel";
 
 import {
   contactSessionIdAtomFamily,
-  organizationIdAtom,
   screenAtom
 } from "@/modules/widget/atoms/widget-atoms";
+import { useWidgetOrganizationId } from "@/modules/widget/context/widget-organization-context";
 import { Button } from "@workspace/ui/components/button";
 import {
   Form,
@@ -34,13 +34,8 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-interface WidgetAuthScreenProps {
-  organizationId: string;
-}
-
-export const WidgetAuthScreen = ({ organizationId: organizationIdProp }: WidgetAuthScreenProps) => {
-  const organizationIdFromAtom = useAtomValue(organizationIdAtom);
-  const organizationId = organizationIdFromAtom ?? organizationIdProp;
+export const WidgetAuthScreen = () => {
+  const organizationId = useWidgetOrganizationId();
   const setContactSessionId = useSetAtom(
     contactSessionIdAtomFamily(organizationId || "")
   );

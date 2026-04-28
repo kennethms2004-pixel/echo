@@ -2,7 +2,7 @@
 
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import type { HTMLAttributes, ReactElement, ReactNode } from "react";
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { Button } from "@workspace/ui/components/button";
 import { cn } from "@workspace/ui/lib/utils";
 
@@ -36,23 +36,34 @@ export const AIBranch = ({
   defaultBranch = 0,
   onBranchChange,
   className,
+  children,
   ...props
 }: AIBranchProps) => {
   const [currentBranch, setCurrentBranch] = useState(defaultBranch);
   const [branches, setBranches] = useState<ReactElement[]>([]);
 
   const handleBranchChange = (newBranch: number) => {
-    setCurrentBranch(newBranch);
-    onBranchChange?.(newBranch);
+    if (branches.length === 0) {
+      return;
+    }
+    const clamped = Math.min(Math.max(newBranch, 0), branches.length - 1);
+    setCurrentBranch(clamped);
+    onBranchChange?.(clamped);
   };
 
   const goToPrevious = () => {
+    if (branches.length === 0) {
+      return;
+    }
     const newBranch =
       currentBranch > 0 ? currentBranch - 1 : branches.length - 1;
     handleBranchChange(newBranch);
   };
 
   const goToNext = () => {
+    if (branches.length === 0) {
+      return;
+    }
     const newBranch =
       currentBranch < branches.length - 1 ? currentBranch + 1 : 0;
     handleBranchChange(newBranch);
@@ -72,7 +83,9 @@ export const AIBranch = ({
       <div
         className={cn("grid w-full gap-2 [&>div]:pb-0", className)}
         {...props}
-      />
+      >
+        {children}
+      </div>
     </AIBranchContext.Provider>
   );
 };
@@ -83,11 +96,16 @@ export type AIBranchMessagesProps = {
 
 export const AIBranchMessages = ({ children }: AIBranchMessagesProps) => {
   const { currentBranch, setBranches, branches } = useAIBranch();
-  const childrenArray = Array.isArray(children) ? children : [children];
+  const childrenArray = useMemo(
+    () => (Array.isArray(children) ? children : [children]),
+    [children],
+  );
 
   // Use useEffect to update branches when they change
   useEffect(() => {
-    if (branches.length !== childrenArray.length) {
+    const lengthMismatch = branches.length !== childrenArray.length;
+    const contentMismatch = childrenArray.some((b, i) => b !== branches[i]);
+    if (lengthMismatch || contentMismatch) {
       setBranches(childrenArray);
     }
   }, [childrenArray, branches, setBranches]);
@@ -206,7 +224,7 @@ export const AIBranchPage = ({ className }: AIBranchPageProps) => {
         className,
       )}
     >
-      {currentBranch + 1} of {totalBranches}
+      {totalBranches > 0 ? currentBranch + 1 : 0} of {totalBranches}
     </span>
   );
 };

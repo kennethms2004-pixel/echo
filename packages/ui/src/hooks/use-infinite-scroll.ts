@@ -7,18 +7,29 @@ interface UseInfiniteScrollProps {
   loadMore: (numItems: number) => void;
   loadSize?: number;
   observerEnabled?: boolean;
+  /** When set, intersection is computed against this element (e.g. chat scroller) instead of the viewport. */
+  intersectionRoot?: HTMLElement | null;
 }
 
 export const useInfiniteScroll = ({
   status,
   loadMore,
   loadSize = 10,
-  observerEnabled = true
+  observerEnabled = true,
+  intersectionRoot
 }: UseInfiniteScrollProps) => {
   const topElementRef = useRef<HTMLDivElement>(null);
+  const isLoadingRef = useRef(false);
+
+  useEffect(() => {
+    if (status !== "LoadingMore") {
+      isLoadingRef.current = false;
+    }
+  }, [status]);
 
   const handleLoadMore = useCallback(() => {
-    if (status === "CanLoadMore") {
+    if (status === "CanLoadMore" && !isLoadingRef.current) {
+      isLoadingRef.current = true;
       loadMore(loadSize);
     }
   }, [status, loadMore, loadSize]);
@@ -26,25 +37,30 @@ export const useInfiniteScroll = ({
   useEffect(() => {
     const topElement = topElementRef.current;
 
-    if (!topElement || !observerEnabled) {
+    const rootReady =
+      intersectionRoot === undefined || intersectionRoot !== null;
+
+    if (!topElement || !observerEnabled || !rootReady) {
       return;
     }
 
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry?.isIntersecting) {
-          handleLoadMore();
-        }
-      },
-      { threshold: 0.1 }
-    );
+    const init: IntersectionObserverInit = { threshold: 0.1 };
+    if (intersectionRoot !== undefined && intersectionRoot !== null) {
+      init.root = intersectionRoot;
+    }
+
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry?.isIntersecting) {
+        handleLoadMore();
+      }
+    }, init);
 
     observer.observe(topElement);
 
     return () => {
       observer.disconnect();
     };
-  }, [handleLoadMore, observerEnabled]);
+  }, [handleLoadMore, observerEnabled, intersectionRoot]);
 
   return {
     topElementRef,

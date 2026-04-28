@@ -4,6 +4,10 @@ import { ConvexError, v } from "convex/values";
 
 import { type Doc } from "../_generated/dataModel";
 import { mutation, query } from "../_generated/server";
+import {
+  CLERK_CONVEX_JWT_ORG_MISSING,
+  clerkOrganizationId
+} from "../lib/clerkOrg";
 import { supportAgent } from "../system/ai/agents/supportAgent";
 
 export const getOne = query({
@@ -20,12 +24,12 @@ export const getOne = query({
       });
     }
 
-    const orgId = identity.organizationId as string;
+    const orgId = clerkOrganizationId(identity);
 
     if (!orgId) {
       throw new ConvexError({
         code: "UNAUTHORIZED",
-        message: "Organization not found"
+        message: CLERK_CONVEX_JWT_ORG_MISSING
       });
     }
 
@@ -80,12 +84,12 @@ export const updateStatus = mutation({
       });
     }
 
-    const orgId = identity.organizationId as string;
+    const orgId = clerkOrganizationId(identity);
 
     if (!orgId) {
       throw new ConvexError({
         code: "UNAUTHORIZED",
-        message: "Organization not found"
+        message: CLERK_CONVEX_JWT_ORG_MISSING
       });
     }
 
@@ -130,12 +134,12 @@ export const getMany = query({
       });
     }
 
-    const orgId = identity.organizationId as string;
+    const orgId = clerkOrganizationId(identity);
 
     if (!orgId) {
       throw new ConvexError({
         code: "UNAUTHORIZED",
-        message: "Organization not found"
+        message: CLERK_CONVEX_JWT_ORG_MISSING
       });
     }
 
@@ -169,13 +173,24 @@ export const getMany = query({
           return null;
         }
 
-        const messages = await supportAgent.listMessages(ctx, {
-          threadId: conversation.threadId,
-          paginationOpts: { numItems: 1, cursor: null }
-        });
+        const snap = conversation.lastMessageSnapshot;
+        if (snap) {
+          lastMessage = {
+            text: snap.text,
+            message: {
+              role: snap.message.role as "user" | "assistant",
+              content: ""
+            }
+          } as MessageDoc;
+        } else {
+          const messages = await supportAgent.listMessages(ctx, {
+            threadId: conversation.threadId,
+            paginationOpts: { numItems: 1, cursor: null }
+          });
 
-        if (messages.page.length > 0) {
-          lastMessage = messages.page[0] ?? null;
+          if (messages.page.length > 0) {
+            lastMessage = messages.page[0] ?? null;
+          }
         }
 
         return {

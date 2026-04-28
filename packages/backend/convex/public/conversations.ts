@@ -21,24 +21,39 @@ export const create = mutation({
       });
     }
 
+    if (session.organizationId !== args.organizationId) {
+      throw new ConvexError({
+        code: "UNAUTHORIZED",
+        message: "Session does not match organization"
+      });
+    }
+
+    const orgId = session.organizationId;
+
     const { threadId } = await supportAgent.createThread(ctx, {
-      userId: args.organizationId
+      userId: orgId
     });
+
+    const greeting = "Hello, how can I help you today?";
 
     // TODO: Later modify to widget settings initial message
     await saveMessage(ctx, components.agent, {
       threadId,
       message: {
         role: "assistant",
-        content: "Hello, how can I help you today?"
+        content: greeting
       }
     });
 
     const conversationId = await ctx.db.insert("conversations", {
       contactSessionId: session._id,
       status: "unresolved",
-      organizationId: args.organizationId,
-      threadId
+      organizationId: orgId,
+      threadId,
+      lastMessageSnapshot: {
+        text: greeting,
+        message: { role: "assistant" }
+      }
     });
 
     return conversationId;
@@ -111,13 +126,24 @@ export const getMany = query({
       conversations.page.map(async (conversation) => {
         let lastMessage: MessageDoc | null = null;
 
-        const messages = await supportAgent.listMessages(ctx, {
-          threadId: conversation.threadId,
-          paginationOpts: { numItems: 1, cursor: null }
-        });
+        const snap = conversation.lastMessageSnapshot;
+        if (snap) {
+          lastMessage = {
+            text: snap.text,
+            message: {
+              role: snap.message.role as "user" | "assistant",
+              content: ""
+            }
+          } as MessageDoc;
+        } else {
+          const messages = await supportAgent.listMessages(ctx, {
+            threadId: conversation.threadId,
+            paginationOpts: { numItems: 1, cursor: null }
+          });
 
-        if (messages.page.length > 0) {
-          lastMessage = messages.page[0] ?? null;
+          if (messages.page.length > 0) {
+            lastMessage = messages.page[0] ?? null;
+          }
         }
 
         return {

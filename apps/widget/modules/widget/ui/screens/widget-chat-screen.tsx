@@ -5,6 +5,7 @@ import { useAction, useQuery } from "convex/react";
 import { useThreadMessages, toUIMessages } from "@convex-dev/agent/react";
 import { useAtomValue, useSetAtom } from "jotai";
 import { ArrowLeftIcon, MenuIcon } from "lucide-react";
+import { useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
@@ -35,9 +36,9 @@ import { useInfiniteScroll } from "@workspace/ui/hooks/use-infinite-scroll";
 import {
   contactSessionIdAtomFamily,
   conversationIdAtom,
-  organizationIdAtom,
   screenAtom
 } from "@/modules/widget/atoms/widget-atoms";
+import { useWidgetOrganizationId } from "@/modules/widget/context/widget-organization-context";
 import { WidgetHeader } from "@/modules/widget/ui/components/widget-header";
 
 const formSchema = z.object({
@@ -49,30 +50,38 @@ export const WidgetChatScreen = () => {
   const setConversationId = useSetAtom(conversationIdAtom);
 
   const conversationId = useAtomValue(conversationIdAtom);
-  const organizationId = useAtomValue(organizationIdAtom);
+  const organizationId = useWidgetOrganizationId();
   const contactSessionId = useAtomValue(
-    contactSessionIdAtomFamily(organizationId || "")
+    contactSessionIdAtomFamily(organizationId)
   );
 
-  const conversation = useQuery(
-    api.public.conversations.getOne,
-    conversationId && contactSessionId
-      ? { conversationId, contactSessionId }
-      : "skip"
+  const conversationArgs = useMemo(
+    () =>
+      conversationId && contactSessionId
+        ? { conversationId, contactSessionId }
+        : ("skip" as const),
+    [conversationId, contactSessionId]
   );
 
-  const messages = useThreadMessages(
-    api.public.messages.getMany,
-    conversation?.threadId && contactSessionId
-      ? { threadId: conversation.threadId, contactSessionId }
-      : "skip",
-    { initialNumItems: 10 }
+  const conversation = useQuery(api.public.conversations.getOne, conversationArgs);
+
+  const threadMessagesArgs = useMemo(
+    () =>
+      conversation?.threadId && contactSessionId
+        ? { threadId: conversation.threadId, contactSessionId }
+        : ("skip" as const),
+    [conversation?.threadId, contactSessionId]
   );
+
+  const messages = useThreadMessages(api.public.messages.getMany, threadMessagesArgs, {
+    initialNumItems: 10
+  });
 
   const {
     topElementRef,
     handleLoadMore,
     canLoadMore,
+    isLoadingFirstPage,
     isLoadingMore
   } = useInfiniteScroll({
     status: messages.status,
@@ -83,6 +92,7 @@ export const WidgetChatScreen = () => {
   const createMessage = useAction(api.public.messages.create);
 
   const form = useForm<z.infer<typeof formSchema>>({
+    mode: "onChange",
     resolver: zodResolver(formSchema),
     defaultValues: { message: "" }
   });
@@ -92,19 +102,28 @@ export const WidgetChatScreen = () => {
       return;
     }
 
-    form.reset();
-
     await createMessage({
       threadId: conversation.threadId,
       prompt: values.message,
       contactSessionId
     });
+
+    form.reset();
   };
 
   const onBack = () => {
     setConversationId(null);
     setScreen("selection");
   };
+
+  const waitingForConversation =
+    Boolean(conversationId && contactSessionId) && conversation === undefined;
+
+  const waitingForMessages =
+    Boolean(conversation?.threadId) &&
+    (messages.status === "LoadingFirstPage" || isLoadingFirstPage);
+
+  const showChatLoading = waitingForConversation || waitingForMessages;
 
   return (
     <>
@@ -121,29 +140,41 @@ export const WidgetChatScreen = () => {
       </WidgetHeader>
       <AIConversation>
         <AIConversationContent>
-          <InfiniteScrollTrigger
-            canLoadMore={canLoadMore}
-            isLoadingMore={isLoadingMore}
-            onLoadMore={handleLoadMore}
-            ref={topElementRef}
-          />
-          {toUIMessages(messages.results ?? []).map((message) => (
-            <AIMessage
-              from={message.role === "user" ? "user" : "assistant"}
-              key={message.id}
-            >
-              <AIMessageContent>
-                <AIResponse>{message.content}</AIResponse>
-              </AIMessageContent>
-              {message.role === "assistant" && (
-                <DicebearAvatar
-                  imageUrl="/logo.svg"
-                  seed="assistant"
-                  size={32}
-                />
-              )}
-            </AIMessage>
-          ))}
+          {showChatLoading ? (
+            <div className="text-muted-foreground flex flex-col items-center justify-center gap-2 py-12 text-center text-sm">
+              <span>
+                {waitingForConversation
+                  ? "Loading conversation…"
+                  : "Loading messages…"}
+              </span>
+            </div>
+          ) : (
+            <>
+              <InfiniteScrollTrigger
+                canLoadMore={canLoadMore}
+                isLoadingMore={isLoadingMore}
+                onLoadMore={handleLoadMore}
+                ref={topElementRef}
+              />
+              {toUIMessages(messages.results ?? []).map((message) => (
+                <AIMessage
+                  from={message.role === "user" ? "user" : "assistant"}
+                  key={message.id}
+                >
+                  <AIMessageContent>
+                    <AIResponse>{message.content}</AIResponse>
+                  </AIMessageContent>
+                  {message.role === "assistant" && (
+                    <DicebearAvatar
+                      imageUrl="/logo.svg"
+                      seed="assistant"
+                      size={32}
+                    />
+                  )}
+                </AIMessage>
+              ))}
+            </>
+          )}
         </AIConversationContent>
         <AIConversationScrollButton />
         {/* TODO: add suggestions */}
@@ -159,11 +190,17 @@ export const WidgetChatScreen = () => {
             name="message"
             render={({ field }) => (
               <AIInputTextarea
-                disabled={conversation?.status === "resolved"}
+                disabled={
+                  conversation?.status === "resolved" ||
+                  form.formState.isSubmitting
+                }
                 onChange={field.onChange}
                 onKeyDown={(event) => {
                   if (event.key === "Enter" && !event.shiftKey) {
                     event.preventDefault();
+                    if (form.formState.isSubmitting) {
+                      return;
+                    }
                     form.handleSubmit(onSubmit)();
                   }
                 }}
@@ -180,7 +217,9 @@ export const WidgetChatScreen = () => {
             <AIInputTools />
             <AIInputSubmit
               disabled={
-                conversation?.status === "resolved" || !form.formState.isValid
+                conversation?.status === "resolved" ||
+                !form.formState.isValid ||
+                form.formState.isSubmitting
               }
               status="ready"
               type="submit"

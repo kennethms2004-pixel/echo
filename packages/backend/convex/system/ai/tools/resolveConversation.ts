@@ -6,22 +6,35 @@ import { supportAgent } from "../agents/supportAgent";
 
 export const resolveConversationTool = createTool({
   description: "Resolve a conversation.",
-  args: z.object({}),
+  args: z.object({
+    reason: z
+      .string()
+      .optional()
+      .describe("Optional short reason why the conversation is being resolved.")
+  }),
   handler: async (ctx, _args) => {
     if (!ctx.threadId) {
-      return "Missing thread ID";
+      throw new Error("Missing thread ID");
     }
 
-    await ctx.runMutation(internal.system.conversations.resolve, {
-      threadId: ctx.threadId
-    });
+    const content = "Conversation resolved.";
 
     await supportAgent.saveMessage(ctx, {
       threadId: ctx.threadId,
       message: {
         role: "assistant",
-        content: "Conversation resolved."
+        content
       }
+    });
+
+    await ctx.runMutation(internal.system.conversations.patchLastMessageSnapshot, {
+      threadId: ctx.threadId,
+      text: content,
+      messageRole: "assistant"
+    });
+
+    await ctx.runMutation(internal.system.conversations.resolve, {
+      threadId: ctx.threadId
     });
 
     return "Conversation resolved.";

@@ -4,8 +4,12 @@ import { paginationOptsValidator } from "convex/server";
 import { ConvexError, v } from "convex/values";
 import { generateText } from "ai";
 
-import { components } from "../_generated/api";
+import { components, internal } from "../_generated/api";
 import { action, mutation, query } from "../_generated/server";
+import {
+  CLERK_CONVEX_JWT_ORG_MISSING,
+  clerkOrganizationId
+} from "../lib/clerkOrg";
 import { supportAgent } from "../system/ai/agents/supportAgent";
 
 export const enhanceResponse = action({
@@ -23,12 +27,24 @@ export const enhanceResponse = action({
       });
     }
 
-    const orgId = identity.organizationId as string;
+    const orgId = clerkOrganizationId(identity);
 
     if (!orgId) {
       throw new ConvexError({
         code: "UNAUTHORIZED",
-        message: "Organization not found"
+        message: CLERK_CONVEX_JWT_ORG_MISSING
+      });
+    }
+
+    const conversation = await ctx.runQuery(
+      internal.system.conversations.getByThreadIdForOrg,
+      { threadId: args.threadId, organizationId: orgId }
+    );
+
+    if (!conversation) {
+      throw new ConvexError({
+        code: "UNAUTHORIZED",
+        message: "Thread not found or access denied"
       });
     }
 
@@ -63,12 +79,12 @@ export const create = mutation({
       });
     }
 
-    const orgId = identity.organizationId as string;
+    const orgId = clerkOrganizationId(identity);
 
     if (!orgId) {
       throw new ConvexError({
         code: "UNAUTHORIZED",
-        message: "Organization not found"
+        message: CLERK_CONVEX_JWT_ORG_MISSING
       });
     }
 
@@ -95,6 +111,10 @@ export const create = mutation({
       });
     }
 
+    if (conversation.status === "unresolved") {
+      await ctx.db.patch(args.conversationId, { status: "escalated" });
+    }
+
     await saveMessage(ctx, components.agent, {
       threadId: conversation.threadId,
       // TODO: decide if we actually want to track agent name per operator.
@@ -102,6 +122,13 @@ export const create = mutation({
       message: {
         role: "assistant",
         content: args.prompt
+      }
+    });
+
+    await ctx.db.patch(args.conversationId, {
+      lastMessageSnapshot: {
+        text: args.prompt,
+        message: { role: "assistant" }
       }
     });
   }
@@ -122,12 +149,12 @@ export const getMany = query({
       });
     }
 
-    const orgId = identity.organizationId as string;
+    const orgId = clerkOrganizationId(identity);
 
     if (!orgId) {
       throw new ConvexError({
         code: "UNAUTHORIZED",
-        message: "Organization not found"
+        message: CLERK_CONVEX_JWT_ORG_MISSING
       });
     }
 

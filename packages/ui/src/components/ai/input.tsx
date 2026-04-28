@@ -113,6 +113,19 @@ export const AIInputTextarea = ({
     }
   };
 
+  const { onKeyDown: propOnKeyDown, value, ...restProps } = props;
+
+  const composedKeyDown: KeyboardEventHandler<HTMLTextAreaElement> = (e) => {
+    handleKeyDown(e);
+    if (!e.defaultPrevented) {
+      propOnKeyDown?.(e);
+    }
+  };
+
+  useEffect(() => {
+    adjustHeight();
+  }, [value, adjustHeight]);
+
   return (
     <Textarea
       className={cn(
@@ -127,10 +140,11 @@ export const AIInputTextarea = ({
         adjustHeight();
         onChange?.(e);
       }}
-      onKeyDown={handleKeyDown}
+      onKeyDown={composedKeyDown}
       placeholder={placeholder}
       ref={textareaRef}
-      {...props}
+      value={value}
+      {...restProps}
     />
   );
 };
@@ -169,7 +183,7 @@ export const AIInputButton = ({
   ...props
 }: AIInputButtonProps) => {
   const newSize =
-    (size ?? Children.count(props.children) > 1) ? "default" : "icon";
+    size ?? (Children.count(props.children) > 1 ? "default" : "icon");
 
   return (
     <Button
@@ -211,6 +225,7 @@ export const AIInputSubmit = ({
 
   return (
     <Button
+      aria-label={!children ? (props["aria-label"] ?? "Submit") : undefined}
       className={cn("gap-1.5 rounded-md rounded-br-lg", className)}
       size={size}
       type="submit"

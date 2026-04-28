@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import type { ReactElement } from "react";
 
 import {
   Tooltip,
@@ -11,7 +11,7 @@ import {
 
 export interface HintProps {
   align?: "center" | "end" | "start";
-  children: ReactNode;
+  children: ReactElement;
   side?: "bottom" | "left" | "right" | "top";
   text: string;
 }

@@ -6,7 +6,7 @@ export const getOne = internalQuery({
   args: {
     contactSessionId: v.id("contactSessions")
   },
-  handler: async (ctx, args) => {
-    return await ctx.db.get(args.contactSessionId);
+  handler: (ctx, args) => {
+    return ctx.db.get(args.contactSessionId);
   }
 });
